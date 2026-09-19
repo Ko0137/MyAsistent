@@ -6,9 +6,10 @@
 
     <Button
         android:id="@+id/fab_widget"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:background="@android:drawable/ic_menu_mic"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:text="🎙️"
+        android:textSize="22sp"
         android:backgroundTint="#FF4081"
         android:elevation="8dp" />
 
