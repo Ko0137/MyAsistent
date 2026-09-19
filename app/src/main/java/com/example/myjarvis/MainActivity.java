@@ -57,7 +57,7 @@ public class MainActivity extends Activity {
         Button voiceBtn = findViewById(R.id.voiceBtn);
         micButton = findViewById(R.id.micButton);
         widgetSwitch = findViewById(R.id.widgetSwitch);
-        Button policyBtn = findViewById(R.id.policyBtn); // Кнопка политики конфиденциальности
+        Button policyBtn = findViewById(R.id.policyBtn);
         
         pulseAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse);
         
@@ -69,9 +69,7 @@ public class MainActivity extends Activity {
         }
 
         if (policyBtn != null) {
-            policyBtn.setOnClickListener(v -> {
-                startActivity(new Intent(this, PrivacyPolicyActivity.class));
-            });
+            policyBtn.setOnClickListener(v -> startActivity(new Intent(this, PrivacyPolicyActivity.class)));
         }
 
         widgetSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -95,7 +93,7 @@ public class MainActivity extends Activity {
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Лира, твой персональный ассистент. Данные устройства не сохраняются. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира, твой персональный ассистент. Данные не сохраняются. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -197,13 +195,12 @@ public class MainActivity extends Activity {
 
         String lowerCmd = command.toLowerCase().trim();
         
-        // Живое сканирование установленных приложений в реальном времени (без сохранения в память)
         if (lowerCmd.contains("сколько приложений") || lowerCmd.contains("какие приложения")) {
             Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
             mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
             List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
             int count = pkgList.size();
-            respond("Произведено сканирование в реальном времени. На устройстве обнаружено " + count + " активных приложений. Данные не сохраняются.");
+            respond("Сканирование завершено. На устройстве найдено " + count + " приложений. Данные не сохраняются.");
             return;
         }
 
