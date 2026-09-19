@@ -54,29 +54,30 @@
             android:fontFamily="sans-serif"/>
     </ScrollView>
 
-    <!-- Нижняя панель ввода -->
+    <!-- Закругленная нижняя панель ввода -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#1E1E1E"
-        android:padding="8dp"
+        android:background="@drawable/bg_rounded_input"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
         android:layout_marginBottom="8dp">
 
         <Button
             android:id="@+id/micButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:text="🎤"
-            android:textSize="18sp"
+            android:textSize="16sp"
             style="?android:attr/buttonStyleSmall"
             android:background="?attr/selectableItemBackgroundBorderless"/>
 
         <EditText
             android:id="@+id/inputField"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:layout_weight="1"
             android:background="@null"
             android:hint="Введите команду..."
@@ -88,8 +89,8 @@
 
         <Button
             android:id="@+id/sendButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:text="➔"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
