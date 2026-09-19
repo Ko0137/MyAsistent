@@ -32,12 +32,14 @@ public class MainActivity extends Activity {
     private ScrollView scrollView;
     private Button micButton;
     private Switch widgetSwitch;
+    private Switch voiceMuteSwitch;
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
     
     private SharedPreferences prefs;
     private String userName;
     private boolean isWaitingForName = false;
+    private boolean isVoiceMuted = false;
     
     private List<Voice> ruVoices = new ArrayList<>();
     private int currentVoiceIndex = 0;
@@ -54,10 +56,20 @@ public class MainActivity extends Activity {
         Button voiceBtn = findViewById(R.id.voiceBtn);
         micButton = findViewById(R.id.micButton);
         widgetSwitch = findViewById(R.id.widgetSwitch);
+        voiceMuteSwitch = findViewById(R.id.voiceMuteSwitch);
         Button policyBtn = findViewById(R.id.policyBtn);
         
         prefs = getSharedPreferences("JarvisPrefs", MODE_PRIVATE);
         userName = prefs.getString("UserName", null);
+        isVoiceMuted = prefs.getBoolean("VoiceMuted", false);
+        if (voiceMuteSwitch != null) {
+            voiceMuteSwitch.setChecked(isVoiceMuted);
+            voiceMuteSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+                isVoiceMuted = isChecked;
+                prefs.edit().putBoolean("VoiceMuted", isVoiceMuted).apply();
+                respond(isVoiceMuted ? "Голосовой ответ отключен." : "Голосовой ответ активирован.");
+            });
+        }
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
@@ -88,7 +100,7 @@ public class MainActivity extends Activity {
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Лира. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира. Безопасный ассистент. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -103,7 +115,7 @@ public class MainActivity extends Activity {
         speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
 
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { inputField.setHint("Слушаю..."); }
+            @Override public void onReadyForSpeech(Bundle params) { inputField.setHint("Слушаю команду..."); }
             @Override public void onBeginningOfSpeech() {}
             @Override public void onRmsChanged(float rmsdB) {}
             @Override public void onBufferReceived(byte[] buffer) {}
@@ -154,7 +166,7 @@ public class MainActivity extends Activity {
         if (ruVoices.isEmpty()) return;
         currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
         tts.setVoice(ruVoices.get(currentVoiceIndex));
-        respond("Голос синтеза изменен.");
+        respond("Голосовой профиль изменен.");
     }
 
     @Override
@@ -174,12 +186,39 @@ public class MainActivity extends Activity {
             userName = command;
             prefs.edit().putString("UserName", userName).apply();
             isWaitingForName = false;
-            respond("Принято, " + userName + ".");
+            respond("Запомнила, " + userName + ". Конфиденциальность активна.");
             return;
         }
 
         String lowerCmd = command.toLowerCase().trim();
         
+        // Управление голосом через текст/речь
+        if (lowerCmd.contains("отключи голос") || lowerCmd.contains("без звука")) {
+            isVoiceMuted = true;
+            if (voiceMuteSwitch != null) voiceMuteSwitch.setChecked(true);
+            prefs.edit().putBoolean("VoiceMuted", true).apply();
+            respond("Голосовые ответы отключены.");
+            return;
+        }
+        if (lowerCmd.contains("включи голос") || lowerCmd.contains("разреши голос")) {
+            isVoiceMuted = false;
+            if (voiceMuteSwitch != null) voiceMuteSwitch.setChecked(false);
+            prefs.edit().putBoolean("VoiceMuted", false).apply();
+            respond("Голосовые ответы включены.");
+            return;
+        }
+
+        // Активация по фразе вроде "лира" или "эй лира"
+        if (lowerCmd.startsWith("лира ") || lowerCmd.equals("лира")) {
+            String subCmd = lowerCmd.replace("лира", "").trim();
+            if (!subCmd.isEmpty()) {
+                processCommand(subCmd);
+            } else {
+                respond("Слушаю вас, " + (userName != null ? userName : "пользователь") + ".");
+            }
+            return;
+        }
+
         // Открытие приложений
         if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ")) {
             String appSearch = lowerCmd.replace("открой ", "").replace("запусти ", "").trim();
@@ -194,7 +233,7 @@ public class MainActivity extends Activity {
         // Поиск
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
-            respond("Ищу: " + query);
+            respond("Выполняю поиск: " + query);
             Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
             intent.putExtra(SearchManager.QUERY, query);
             startActivity(intent);
@@ -205,20 +244,20 @@ public class MainActivity extends Activity {
         if (lowerCmd.startsWith("позвони")) {
             String number = lowerCmd.replaceAll("[^0-9+]", "");
             if (!number.isEmpty()) {
-                respond("Набор номера...");
+                respond("Набираю номер...");
                 Intent intent = new Intent(Intent.ACTION_DIAL);
                 intent.setData(Uri.parse("tel:" + number));
                 startActivity(intent);
             } else {
-                respond("Укажите номер.");
+                respond("Укажите номер телефона.");
             }
             return;
         }
         
         if (lowerCmd.contains("привет")) { 
-            respond("Приветствую, " + userName + "."); 
+            respond("Здравствуйте, " + (userName != null ? userName : "") + "."); 
         } else { 
-            respond("Команда не распознана. Доступно: 'Открой...', 'Найди...', 'Позвони...'."); 
+            respond("Команда не распознана. Скажите 'Лира, открой [приложение]' или 'Лира, найди [запрос]'."); 
         }
     }
 
@@ -243,7 +282,9 @@ public class MainActivity extends Activity {
     
     private void respond(String text) {
         appendMessage("L.I.R.A.", text);
-        if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        if (tts != null && !isVoiceMuted) {
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
     }
 
     private void appendMessage(String sender, String message) {

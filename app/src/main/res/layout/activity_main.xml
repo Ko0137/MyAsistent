@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:padding="12dp"
         android:gravity="center_vertical"
         android:background="#0B0B14">
         
@@ -17,36 +17,59 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="L.I.R.A. v1.8"
+            android:text="L.I.R.A. v2.0"
             android:textColor="#00FFFF"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1"/>
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <Switch
+            android:id="@+id/voiceMuteSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Без звука"
+            android:textColor="#A0A0C0"
+            android:textSize="11sp"
+            android:layout_marginEnd="6dp"/>
 
         <Switch
             android:id="@+id/widgetSwitch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Виджет"
-            android:textColor="#A0A0C0"/>
+            android:textColor="#A0A0C0"
+            android:textSize="11sp"/>
+    </LinearLayout>
+
+    <!-- Вторая строка панели управления для дополнительных кнопок -->
+    <LinearLayout
+        android:id="@+id/subTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/topBar"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
+        android:background="#0B0B14"
+        android:gravity="end">
 
         <Button
             android:id="@+id/voiceBtn"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="32dp"
             android:text="Голос"
-            android:textSize="11sp"
-            android:layout_marginStart="6dp"
+            android:textSize="10sp"
+            android:layout_marginStart="4dp"
             android:background="#151525"
             android:textColor="#00FFFF"/>
             
         <Button
             android:id="@+id/policyBtn"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:text=" Info "
-            android:textSize="11sp"
-            android:layout_marginStart="6dp"
+            android:layout_height="32dp"
+            android:text="Безопасность"
+            android:textSize="10sp"
+            android:layout_marginStart="4dp"
             android:background="#151525"
             android:textColor="#00FFFF"/>
     </LinearLayout>
@@ -56,7 +79,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomBar"
-        android:layout_below="@id/topBar"
+        android:layout_below="@id/subTopBar"
         android:padding="16dp">
         
         <TextView
@@ -66,7 +89,7 @@
             android:textColor="#00FF66"
             android:textSize="14sp"
             android:fontFamily="monospace"
-            android:text="[System] Neural link active.\n[System] Ready for voice commands."/>
+            android:text="[System] Secure core online.\n[System] Say 'Лира [команда]' or use the floating widget."/>
     </ScrollView>
 
     <LinearLayout
@@ -81,11 +104,11 @@
 
         <Button
             android:id="@+id/micButton"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="#00FFFF"
             android:text="🎤"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textColor="#000000"/>
 
         <EditText
@@ -93,15 +116,15 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
-            android:hint="Команда для Лиры..."
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:hint="Команда..."
             android:textColorHint="#505070"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:background="#121222"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"/>
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"/>
 
         <Button
             android:id="@+id/sendButton"
@@ -110,6 +133,6 @@
             android:background="#151525"
             android:text="➤"
             android:textColor="#00FFFF"
-            android:textSize="18sp"/>
+            android:textSize="16sp"/>
     </LinearLayout>
 </RelativeLayout>
