@@ -25,10 +25,8 @@ public class SettingsActivity extends AppCompatActivity {
         TextView privacyPolicyLink = findViewById(R.id.privacyPolicyLink);
         Button backButton = findViewById(R.id.backButton);
 
-        // Делаем текст ссылки подчеркнутым программно
         privacyPolicyLink.setPaintFlags(privacyPolicyLink.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
 
-        // Загружаем сохраненные настройки
         SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         boolean isDarkTheme = prefs.getBoolean("theme_dark", true);
         boolean isFemaleVoice = prefs.getBoolean("voice_female", true);
@@ -38,7 +36,7 @@ public class SettingsActivity extends AppCompatActivity {
         voiceSwitch.setChecked(isFemaleVoice);
         quietSwitch.setChecked(isQuietMode);
 
-        // Обработка переключения темы в реальном времени
+        // Мгновенная смена темы при переключении тумблера
         themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putBoolean("theme_dark", isChecked);
@@ -51,21 +49,18 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        // Обработка переключения голоса
         voiceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putBoolean("voice_female", isChecked);
             editor.apply();
         });
 
-        // Обработка тихого режима
         quietSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putBoolean("quiet_mode", isChecked);
             editor.apply();
         });
 
-        // Показываем всплывающее окно с политикой конфиденциальности
         privacyPolicyLink.setOnClickListener(v -> showPrivacyPolicyDialog());
 
         backButton.setOnClickListener(v -> {
