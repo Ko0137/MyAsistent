@@ -1,8 +1,6 @@
 package com.example.myjarvis;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
@@ -13,7 +11,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
@@ -21,17 +18,11 @@ public class MainActivity extends AppCompatActivity {
     private EditText inputField;
     private ScrollView scrollView;
     private TextToSpeech tts;
-    private boolean isFlashOn = false;
     private static final int REQUEST_CODE_STT = 101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
-        boolean isDark = prefs.getBoolean("isDarkTheme", true);
-        AppCompatDelegate.setDefaultNightMode(isDark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
-
         setContentView(R.layout.activity_main);
 
         chatDisplay = findViewById(R.id.chatDisplay);
@@ -41,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
         Button micButton = findViewById(R.id.micButton);
         ImageButton settingsButton = findViewById(R.id.settingsButton);
 
+        // Безопасная инициализация TTS
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru", "RU"));
@@ -92,8 +84,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void processCommand(String command) {
         String lower = command.toLowerCase();
-        SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
-        boolean quietMode = prefs.getBoolean("isQuietMode", false);
         String response;
 
         if (lower.contains("фонарик")) {
@@ -107,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         appendLog("[L.I.R.A.] " + response);
-        if (!quietMode && tts != null) {
+        if (tts != null) {
             tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }
