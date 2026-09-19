@@ -17,7 +17,7 @@
         android:gravity="center"
         android:paddingBottom="12dp"/>
 
-    <!-- Блок настроек фоновых опций -->
+    <!-- Блок настроек (виджет и голос) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -60,11 +60,12 @@
             android:text="" />
     </ScrollView>
 
-    <!-- Поле ввода текста и кнопка отправки -->
+    <!-- Панель ввода: текст, кнопка микрофона и кнопка отправки -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/inputMessage"
@@ -77,10 +78,21 @@
             android:backgroundTint="#00E676" />
 
         <Button
+            android:id="@+id/micButton"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:text="🎤"
+            android:textSize="18sp"
+            android:backgroundTint="#333333"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Отправить"
+            android:text="ОТПРАВИТЬ"
             android:backgroundTint="#00E676"
             android:textColor="#000000" />
     </LinearLayout>

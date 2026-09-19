@@ -1,6 +1,7 @@
 package com.example.myjarvis;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,6 +11,7 @@ import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -18,6 +20,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView chatLog;
     private Switch switchWidget;
     private Switch switchVoice;
+    private SharedPreferences prefs;
+    private String userName = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,28 +31,51 @@ public class MainActivity extends AppCompatActivity {
         inputMessage = findViewById(R.id.inputMessage);
         chatLog = findViewById(R.id.chatLog);
         Button sendButton = findViewById(R.id.sendButton);
+        Button micButton = findViewById(R.id.micButton);
         switchWidget = findViewById(R.id.switchWidget);
         switchVoice = findViewById(R.id.switchVoice);
 
-        // Стандартное приветствие при обычном открытии приложения
-        chatLog.setText("L.I.R.A.: Привет, Костя! Чем я могу помочь сегодня?\n");
+        prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
+        userName = prefs.getString("user_name", "");
 
-        // Обработка отправки текста по кнопке
+        // Проверяем, знакомы ли мы с пользователем
+        if (userName.isEmpty()) {
+            askForUserName();
+        } else {
+            chatLog.setText("L.I.R.A.: Привет, " + userName + "! Чем я могу помочь сегодня?\n");
+        }
+
+        // Обработка текстового ввода
         sendButton.setOnClickListener(v -> {
             String text = inputMessage.getText().toString().trim();
             if (!text.isEmpty()) {
-                chatLog.append("Костя: " + text + "\n");
-                chatLog.append("L.I.R.A.: Обрабатываю ваш запрос...\n");
+                chatLog.append(userName + ": " + text + "\n");
+                
+                // Простая логика обработки команд
+                String lower = text.toLowerCase();
+                if (lower.contains("открой") || lower.contains("запусти")) {
+                    chatLog.append("L.I.R.A.: Выполняю запрос...\n");
+                    // Здесь можно добавить открытие приложений или URL
+                } else {
+                    chatLog.append("L.I.R.A.: Я услышала вас, " + userName + "! Обрабатываю...\n");
+                }
+                
                 inputMessage.setText("");
             }
         });
 
-        // Управление плавающим виджетом через настройки (выключен по умолчанию)
+        // Кнопка микрофона
+        micButton.setOnClickListener(v -> {
+            chatLog.append("L.I.R.A.: Голосовой ввод активирован (слушаю)...\n");
+            Toast.makeText(this, "Слушаю ваш голос...", Toast.LENGTH_SHORT).show();
+        });
+
+        // Управление плавающим виджетом через настройки
         if (switchWidget != null) {
             switchWidget.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                        Toast.makeText(this, "Пожалуйста, разрешите наложение поверх других окон", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Разрешите наложение поверх других окон", Toast.LENGTH_LONG).show();
                         Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                                 Uri.parse("package:" + getPackageName()));
                         startActivity(intent);
@@ -64,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Управление опцией голосовой активации (опционально)
+        // Управление голосовой активацией
         if (switchVoice != null) {
             switchVoice.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
@@ -74,5 +101,26 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+    }
+
+    private void askForUserName() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Знакомство");
+        builder.setMessage("Привет! Я ассистент L.I.R.A. Как вас зовут?");
+
+        final EditText input = new EditText(this);
+        builder.setView(input);
+
+        builder.setPositiveButton("Сохранить", (dialog, which) -> {
+            userName = input.getText().toString().trim();
+            if (userName.isEmpty()) {
+                userName = "Друг";
+            }
+            prefs.edit().putString("user_name", userName).apply();
+            chatLog.setText("L.I.R.A.: Приятно познакомиться, " + userName + "! Чем я могу помочь?\n");
+        });
+
+        builder.setCancelable(false);
+        builder.show();
     }
 }
