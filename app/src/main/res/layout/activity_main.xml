@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Верхняя панель со статусом и кнопкой настроек -->
+    <!-- Верхняя панель -->
     <LinearLayout
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
+        android:layout_alignParentTop="true"
         android:layout_marginBottom="12dp">
 
         <TextView
@@ -32,12 +33,13 @@
             android:textSize="14sp" />
     </LinearLayout>
 
-    <!-- Область чата (история сообщений) -->
+    <!-- Область чата -->
     <ScrollView
         android:id="@+id/chatScrollView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomBar"
+        android:layout_below="@id/topBar"
         android:layout_marginBottom="12dp"
         android:fillViewport="true">
 
@@ -48,30 +50,56 @@
             android:orientation="vertical" />
     </ScrollView>
 
-    <!-- Нижняя панель ввода сообщения -->
+    <!-- Нижняя панель ввода (текст + микрофон + отправить) -->
     <LinearLayout
+        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/etInput"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Введите сообщение..."
+            android:hint="Введите или скажите..."
             android:inputType="text"
             android:maxLines="2" />
+
+        <Button
+            android:id="@+id/btnMic"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:backgroundTint="#00E676"
+            android:text="🎤"
+            android:textColor="#121212"
+            android:textSize="16sp" />
 
         <Button
             android:id="@+id/btnSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="4dp"
             android:backgroundTint="#00E676"
-            android:text="Отправить"
+            android:text="➤"
             android:textColor="#121212"
             android:textStyle="bold" />
     </LinearLayout>
 
-</LinearLayout>
+    <!-- Плавающая кнопка-шарик в стиле Gemini для фонового голосового вызова -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabGeminiVoice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottomBar"
+        android:layout_alignParentEnd="true"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="Голосовой режим"
+        android:src="@android:drawable/ic_btn_speak_now"
+        app:backgroundTint="#00E676"
+        app:tint="#121212" />
+
+</RelativeLayout>
