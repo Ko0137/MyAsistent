@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -38,70 +39,69 @@ public class LiraBackgroundService extends Service {
                 .build();
 
         startForeground(1, notification);
-        initFloatingWidget();
+        
+        // Безопасно инициализируем виджет только если есть разрешение
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
+            initFloatingWidget();
+        }
     }
 
     private void initFloatingWidget() {
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        
-        // Создаем плавающую кнопку
-        floatingView = LayoutInflater.from(this).inflate(R.layout.floating_widget, null);
-
-        int LAYOUT_FLAG;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
-        }
-
-        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                LAYOUT_FLAG,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT);
-
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 100;
-        params.y = 100;
-
-        // Обработка нажатия на плавающий виджет (запуск прослушивания)
-        Button fab = floatingView.findViewById(R.id.fab_widget);
-        fab.setOnClickListener(v -> {
-            Toast.makeText(this, "L.I.R.A. слушаю команду...", Toast.LENGTH_SHORT).show();
-            // Здесь можно запустить логику распознавания или открыть MainActivity
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        });
-
-        // Перетаскивание виджета по экрану
-        fab.setOnTouchListener(new View.OnTouchListener() {
-            private int initialX;
-            private int initialY;
-            private float initialTouchX;
-            private float initialTouchY;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(floatingView, params);
-                        return true;
-                }
-                return false;
-            }
-        });
-
         try {
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            floatingView = LayoutInflater.from(this).inflate(R.layout.floating_widget, null);
+
+            int LAYOUT_FLAG;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            } else {
+                LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
+            }
+
+            final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    LAYOUT_FLAG,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    PixelFormat.TRANSLUCENT);
+
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.x = 100;
+            params.y = 100;
+
+            Button fab = floatingView.findViewById(R.id.fab_widget);
+            fab.setOnClickListener(v -> {
+                Toast.makeText(this, "L.I.R.A. слушаю команду...", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(this, MainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            });
+
+            fab.setOnTouchListener(new View.OnTouchListener() {
+                private int initialX;
+                private int initialY;
+                private float initialTouchX;
+                private float initialTouchY;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            initialX = params.x;
+                            initialY = params.y;
+                            initialTouchX = event.getRawX();
+                            initialTouchY = event.getRawY();
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            params.x = initialX + (int) (event.getRawX() - initialTouchX);
+                            params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                            windowManager.updateViewLayout(floatingView, params);
+                            return true;
+                    }
+                    return false;
+                }
+            });
+
             windowManager.addView(floatingView, params);
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,7 +126,11 @@ public class LiraBackgroundService extends Service {
     public void onDestroy() {
         super.onDestroy();
         if (floatingView != null && windowManager != null) {
-            windowManager.removeView(floatingView);
+            try {
+                windowManager.removeView(floatingView);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
