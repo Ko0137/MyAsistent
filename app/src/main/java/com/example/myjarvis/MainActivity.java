@@ -23,7 +23,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Применяем сохраненную тему перед созданием activity
         SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         boolean isDarkTheme = prefs.getBoolean("theme_dark", true);
         if (isDarkTheme) {
@@ -41,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
         chatScrollView = findViewById(R.id.chatScrollView);
         etInput = findViewById(R.id.etInput);
 
-        // Инициализация синтеза речи
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru", "RU"));
@@ -69,7 +67,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Приветственное сообщение в чат
         addMessageToChat("L.I.R.A.: Привет! Я твой ассистент. Чем могу помочь?", Gravity.START);
     }
 
@@ -78,14 +75,12 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         boolean isFemale = prefs.getBoolean("voice_female", true);
         
-        // Пытаемся выбрать женский или мужской голос через доступные локали/голоса TTS
         try {
             for (java.util.Locale locale : tts.getAvailableLanguages()) {
                 if (locale.getLanguage().equals("ru")) {
                     tts.setLanguage(locale);
                 }
             }
-            // Выбираем голос по признаку пола (если поддерживается движком)
             for (android.speech.tts.Voice voice : tts.getVoices()) {
                 if (voice.getLocale().getLanguage().equals("ru")) {
                     String name = voice.getName().toLowerCase();
@@ -99,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } catch (Exception e) {
-            // Если кастомный выбор голоса не поддерживается системой, оставляем дефолтный русский
+            // Игнорируем, если кастомный голос не поддерживается
         }
     }
 
@@ -137,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
     private void addMessageToChat(String message, int gravity) {
         TextView tv = new TextView(this);
         tv.setText(message);
-        tv.setTextSize(15sp);
+        tv.setTextSize(15); // Исправлено: убран некорректный суффикс sp
         tv.setPadding(14, 10, 14, 10);
         
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -155,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Обновляем настройки голоса при возвращении из меню настроек
         applyVoicePreference();
     }
 
