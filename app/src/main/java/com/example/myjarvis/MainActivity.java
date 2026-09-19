@@ -15,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.AlarmClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
@@ -36,7 +37,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.text.SimpleDateFormat;
@@ -44,6 +44,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -105,18 +107,17 @@ public class MainActivity extends AppCompatActivity {
         setupSpeechRecognizer();
         loadHistory();
 
-        // Приветственное сообщение с количеством доступных приложений (не сохраняется в историю)
         int appCount = getLaunchableAppsCount();
         if (messageList.isEmpty()) {
-            addMessage("L.I.R.A.: Все системы активны. Нажми '?' сверху для просмотра списка команд!", false, true);
+            addMessage("L.I.R.A.: Все системы активны. Нажми '?' сверху для списка команд!", false, true);
         }
-        addMessage("Инфо: Найдено " + appCount + " приложений, доступных для голосового запуска.", false, false);
+        addMessage("Инфо: Найдено " + appCount + " приложений для голосового запуска.", false, false);
 
         sendButton.setOnClickListener(v -> {
             vibrate(30);
             String text = inputMessage.getText().toString().trim();
             if (!text.isEmpty()) {
-                processCommand(text);
+                handleRawInput(text);
                 inputMessage.setText("");
             }
         });
@@ -134,17 +135,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        btnSettings.setOnClickListener(v -> {
-            vibrate(30);
-            showSettingsDialog();
-        });
-
-        btnHelp.setOnClickListener(v -> {
-            vibrate(30);
-            showHelpDialog();
-        });
+        btnSettings.setOnClickListener(v -> { vibrate(30); showSettingsDialog(); });
+        btnHelp.setOnClickListener(v -> { vibrate(30); showHelpDialog(); });
     }
-    
+
     private int getLaunchableAppsCount() {
         Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -157,12 +151,9 @@ public class MainActivity extends AppCompatActivity {
         if (!accepted) {
             new AlertDialog.Builder(this)
                 .setTitle("🔒 Конфиденциальность L.I.R.A.")
-                .setMessage("Все ваши данные, голос и заметки обрабатываются строго локально на вашем устройстве и НЕ передаются на сторонние серверы.\n\nПродолжая, вы соглашаетесь с Политикой конфиденциальности.")
-                .setPositiveButton("Принять", (dialog, which) -> {
-                    prefs.edit().putBoolean("privacy_accepted", true).apply();
-                })
-                .setCancelable(false)
-                .show();
+                .setMessage("Все данные обрабатываются локально.\nПродолжая, вы соглашаетесь с Политикой.")
+                .setPositiveButton("Принять", (dialog, which) -> prefs.edit().putBoolean("privacy_accepted", true).apply())
+                .setCancelable(false).show();
         }
     }
 
@@ -173,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
             speechRecognizer.startListening(intent);
             isListening = true;
-            statusText.setText("LISTENING");
+            statusText.setText("LISTENING...");
             statusText.setBackgroundColor(0xFFD32F2F);
             micButton.setBackgroundResource(R.drawable.bg_mic_active);
         } else {
@@ -187,16 +178,11 @@ public class MainActivity extends AppCompatActivity {
         statusText.setText("READY");
         statusText.setBackgroundColor(0xFF1B4D3E);
         micButton.setBackgroundResource(R.drawable.bg_mic_btn);
-        
-        if (speechRecognizer != null) {
-            speechRecognizer.stopListening();
-        }
+        if (speechRecognizer != null) speechRecognizer.stopListening();
     }
 
     private void setupSpeechRecognizer() {
-        if (speechRecognizer != null) {
-            speechRecognizer.destroy();
-        }
+        if (speechRecognizer != null) speechRecognizer.destroy();
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
@@ -204,19 +190,13 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
-                @Override public void onEndOfSpeech() { 
-                    stopListening(); 
-                }
-                @Override public void onError(int error) { 
-                    stopListening();
-                    // Полностью пересоздаем распознаватель при ошибке, чтобы избежать "залипания"
-                    setupSpeechRecognizer();
-                }
+                @Override public void onEndOfSpeech() { stopListening(); }
+                @Override public void onError(int error) { stopListening(); setupSpeechRecognizer(); }
                 @Override public void onResults(Bundle results) {
                     stopListening();
                     ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
-                        processCommand(matches.get(0));
+                        handleRawInput(matches.get(0));
                     }
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
@@ -225,70 +205,112 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void processCommand(String text) {
+    private void handleRawInput(String text) {
         addMessage(text, true, true);
         String lower = text.toLowerCase().trim();
-        String response = "";
+        
+        if (lower.contains(" и ") && !lower.startsWith("заметка") && !lower.startsWith("запиши")) {
+            String[] commands = lower.split(" и ");
+            StringBuilder combinedResponse = new StringBuilder();
+            for (String cmd : commands) {
+                String res = processSingleCommand(cmd.trim());
+                if (!res.isEmpty()) combinedResponse.append(res).append(". ");
+            }
+            respond(combinedResponse.toString().trim());
+        } else {
+            String res = processSingleCommand(lower);
+            respond(res);
+        }
+    }
 
+    private String processSingleCommand(String lower) {
         try {
-            if (lower.startsWith("открой ") || lower.startsWith("запусти ")) {
-                String appQuery = lower.replaceFirst("^(открой|запусти)\\s+", "").trim();
+            if (containsAny(lower, "открой", "запусти", "включи", "старт", "давай посмотрим")) {
+                String appQuery = lower.replaceAll("^(открой|запусти|включи|старт|давай посмотрим)\\s+", "").trim();
                 String launched = openAppByName(appQuery);
-                if (launched != null) {
-                    response = launched;
-                } else if (appQuery.contains("камера")) {
+                if (launched != null) return launched;
+                
+                if (containsAny(appQuery, "камеру", "фотку", "снимай")) {
                     startActivity(new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA));
-                    response = "Открываю камеру.";
-                } else if (appQuery.contains("браузер")) {
+                    return "Открываю камеру";
+                } else if (containsAny(appQuery, "браузер", "интернет", "хром")) {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com")));
-                    response = "Открываю браузер.";
-                } else {
-                    response = "Приложение \"" + appQuery + "\" не найдено.";
+                    return "Открываю браузер";
                 }
-            } else if (containsAny(lower, "фонарик", "свет", "подсвети", "вспышка")) {
+                return "Приложение \"" + appQuery + "\" не найдено";
+            }
+            else if (containsAny(lower, "будильник", "разбуди", "заведи", "поставь на")) {
+                Pattern p = Pattern.compile("(\\d{1,2})[:\\s-](\\d{2})|(\\d{1,2})\\s+(часов|часа|час)");
+                Matcher m = p.matcher(lower);
+                if (m.find()) {
+                    int hour = Integer.parseInt(m.group(1) != null ? m.group(1) : m.group(3));
+                    int minute = m.group(2) != null ? Integer.parseInt(m.group(2)) : 0;
+                    
+                    Intent alarmIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
+                    alarmIntent.putExtra(AlarmClock.EXTRA_HOUR, hour);
+                    alarmIntent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
+                    alarmIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, true);
+                    alarmIntent.putExtra(AlarmClock.EXTRA_MESSAGE, "Будильник L.I.R.A.");
+                    
+                    if (alarmIntent.resolveActivity(getPackageManager()) != null) {
+                        startActivity(alarmIntent);
+                        return "Будильник установлен на " + String.format(Locale.getDefault(), "%02d:%02d", hour, minute);
+                    }
+                    return "В системе нет приложения часов.";
+                }
+                return "Не поняла время. Скажи 'Будильник на 7:30' или 'Разбуди в 8 часов'.";
+            }
+            else if (containsAny(lower, "фонарик", "свет", "подсвети", "вспышка", "люмос", "темно")) {
                 CameraManager camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
                 String cameraId = camManager.getCameraIdList()[0];
                 isTorchOn = !isTorchOn;
                 camManager.setTorchMode(cameraId, isTorchOn);
-                response = isTorchOn ? "Фонарик включен." : "Фонарик выключен.";
-            } else if (containsAny(lower, "батарея", "заряд", "аккумулятор")) {
+                return isTorchOn ? "Свет включен" : "Свет выключен";
+            }
+            else if (containsAny(lower, "батарея", "заряд", "аккумулятор", "сколько процентов", "питание")) {
                 IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
                 Intent batteryStatus = registerReceiver(null, ifilter);
                 int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
-                response = "Текущий уровень заряда аккумулятора: " + level + "%.";
-            } else if (containsAny(lower, "пауза", "музыка", "плей", "стоп трек")) {
+                return "Уровень заряда: " + level + "%";
+            }
+            else if (containsAny(lower, "пауза", "музыка", "плей", "стоп трек", "играй", "заткнись")) {
                 AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
-                response = "Управление медиаплеером выполнено.";
-            } else if (lower.contains("прочитай заметки") || lower.contains("покажи заметки")) {
-                String notes = prefs.getString("notes_list", "Заметок пока нет.");
-                response = "Сохраненные заметки:\n" + notes;
-            } else if (lower.contains("очисти заметки") || lower.contains("удали заметки")) {
+                return "Медиаплеер обновлен";
+            }
+            else if (containsAny(lower, "прочитай заметки", "покажи заметки", "что я записал", "мои записи")) {
+                return "Твои записи:\n" + prefs.getString("notes_list", "Пусто.");
+            }
+            else if (containsAny(lower, "очисти заметки", "удали заметки", "сотри блокнот", "забудь все")) {
                 prefs.edit().remove("notes_list").apply();
-                response = "Все заметки удалены.";
-            } else if (lower.startsWith("заметка")) {
-                String newNote = text.replaceFirst("(?i)^заметка", "").trim();
+                return "Блокнот очищен";
+            }
+            else if (containsAny(lower, "заметка", "запиши", "добавь в блокнот")) {
+                String newNote = lower.replaceFirst("(?i)^(заметка|запиши|добавь в блокнот)\\s+", "").trim();
                 if (!newNote.isEmpty()) {
                     String existing = prefs.getString("notes_list", "");
                     String updated = existing.isEmpty() ? "• " + newNote : existing + "\n• " + newNote;
                     prefs.edit().putString("notes_list", updated).apply();
-                    response = "Добавлена заметка: \"" + newNote + "\"";
-                } else {
-                    response = "Скажи: 'Заметка [твой текст]' чтобы добавить.";
+                    return "Сохранила: " + newNote;
                 }
-            } else if (containsAny(lower, "привет", "здравствуй", "хей")) {
-                response = "Привет, " + userName + "! Я на связи.";
-            } else {
-                response = "Команда принята: " + text;
+                return "Что именно записать?";
             }
+            else if (containsAny(lower, "привет", "здравствуй", "хей", "лира", "ты тут")) {
+                return "Я на связи, " + userName + ".";
+            }
+            
+            return "Команда принята: " + lower;
         } catch (Exception e) {
-            response = "Ошибка выполнения: " + e.getMessage();
+            return "Ошибка: " + e.getMessage();
         }
+    }
 
-        addMessage(response, false, true);
+    private void respond(String text) {
+        if (text.isEmpty()) return;
+        addMessage(text, false, true);
         if (isVoiceEnabled && tts != null) {
-            tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }
 
@@ -317,29 +339,21 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    // Новый метод добавления сообщения с флагом сохранения
     private void addMessage(String text, boolean isUser, boolean saveToHistory) {
         String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
         messageList.add(new ChatMessage(text, isUser, time));
         chatAdapter.notifyItemInserted(messageList.size() - 1);
         recyclerViewChat.smoothScrollToPosition(messageList.size() - 1);
-        if (saveToHistory) {
-            saveHistory();
-        }
+        if (saveToHistory) saveHistory();
     }
 
     private void saveHistory() {
         StringBuilder sb = new StringBuilder();
         for (ChatMessage msg : messageList) {
-            // Защита от сохранения временных системных уведомлений
             if (msg.getMessage().startsWith("Инфо: Найдено")) continue;
-            
-            sb.append(msg.isUser() ? "1" : "0")
-              .append(";")
-              .append(msg.getTime())
-              .append(";")
-              .append(msg.getMessage().replace("\n", " "))
-              .append("\n");
+            sb.append(msg.isUser() ? "1" : "0").append(";")
+              .append(msg.getTime()).append(";")
+              .append(msg.getMessage().replace("\n", " ")).append("\n");
         }
         prefs.edit().putString("chat_history_v2", sb.toString()).apply();
     }
@@ -351,10 +365,7 @@ public class MainActivity extends AppCompatActivity {
             String[] lines = history.split("\n");
             for (String line : lines) {
                 String[] parts = line.split(";", 3);
-                if (parts.length == 3) {
-                    boolean isUser = parts[0].equals("1");
-                    messageList.add(new ChatMessage(parts[2], isUser, parts[1]));
-                }
+                if (parts.length == 3) messageList.add(new ChatMessage(parts[2], parts[0].equals("1"), parts[1]));
             }
             chatAdapter.notifyDataSetChanged();
         }
@@ -394,12 +405,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         switchWidget.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                    Toast.makeText(this, "Включите разрешение 'Отображение поверх других окон'", Toast.LENGTH_LONG).show();
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                }
+            if (isChecked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "Включите разрешение 'Отображение поверх других окон'", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
             }
         });
 
@@ -416,12 +425,13 @@ public class MainActivity extends AppCompatActivity {
             if (userName.isEmpty()) userName = "Пользователь";
             prefs.edit().putString("user_name", userName).apply();
 
+            Intent serviceIntent = new Intent(this, LiraBackgroundService.class);
             if (widgetEnabled) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                    startService(new Intent(this, LiraBackgroundService.class));
+                    ContextCompat.startForegroundService(this, serviceIntent);
                 }
             } else {
-                stopService(new Intent(this, LiraBackgroundService.class));
+                stopService(serviceIntent);
             }
 
             AppCompatDelegate.setDefaultNightMode(dark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
