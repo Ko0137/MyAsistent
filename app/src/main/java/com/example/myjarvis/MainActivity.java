@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             response = "Открываю камеру.";
         } else {
-            response = "Запрос принят: \"" + query << "\". Выполняю анализ!";
+            response = "Запрос принят: \"" + query + "\". Выполняю анализ!";
         }
 
         addMessageToChat("L.I.R.A.: " + response, Gravity.START);
