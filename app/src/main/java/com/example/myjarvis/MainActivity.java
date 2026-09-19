@@ -3,10 +3,13 @@ package com.example.myjarvis;
 import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -23,12 +26,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
-    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    private static final int PERMISSIONS_REQUEST_CODE = 200;
     private TextToSpeech tts;
     private boolean isTtsInitialized = false;
     private SpeechRecognizer speechRecognizer;
@@ -36,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout chatLayout;
     private ScrollView chatScrollView;
     private EditText etInput;
+    private int installedAppsCount = 0;
+    private List<ApplicationInfo> installedApps;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,15 +58,15 @@ public class MainActivity extends AppCompatActivity {
         Button btnSettings = findViewById(R.id.btnSettings);
         Button btnSend = findViewById(R.id.btnSend);
         Button btnMic = findViewById(R.id.btnMic);
-        FloatingActionButton fabGeminiVoice = findViewById(R.id.fabGeminiVoice);
         
         chatLayout = findViewById(R.id.chatLayout);
         chatScrollView = findViewById(R.id.chatScrollView);
         etInput = findViewById(R.id.etInput);
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO_PERMISSION);
-        }
+        checkAndRequestPermissions();
+
+        // Сканируем установленные приложения
+        scanInstalledApplications();
 
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
@@ -71,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 boolean isQuietMode = prefs.getBoolean("quiet_mode", false);
                 if (!isQuietMode) {
-                    speakText("L.I.R.A. активна и готова к работе.");
+                    speakText("Привет, Костя! Система L.I.R.A. активна. На устройстве обнаружено " + installedAppsCount + " приложений.");
                 }
             }
         });
@@ -93,19 +98,63 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnMic.setOnClickListener(v -> startVoiceListening());
-        fabGeminiVoice.setOnClickListener(v -> {
-            Toast.makeText(this, "Слушаю вас...", Toast.LENGTH_SHORT).show();
-            startVoiceListening();
-        });
 
-        addMessageToChat("L.I.R.A.: Привет! Я твоя ассистентка. Жду команды или голосовой запрос.", Gravity.START);
+        addMessageToChat("L.I.R.A.: Привет, Костя! Сканирование завершено: найдено приложений — " + installedAppsCount + ".", Gravity.START);
+
+        handleVoiceIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleVoiceIntent(intent);
+    }
+
+    private void handleVoiceIntent(Intent intent) {
+        if (intent != null && intent.getBooleanExtra("start_voice", false)) {
+            startVoiceListening();
+        }
+    }
+
+    private void checkAndRequestPermissions() {
+        List<String> listPermissionsNeeded = new ArrayList<>();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.RECORD_AUDIO);
+        }
+        if (!listPermissionsNeeded.isEmpty()) {
+            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSIONS_REQUEST_CODE);
+        }
+
+        // Запрос на отображение поверх других окон (для фонового шарика)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        }
+    }
+
+    private void scanInstalledApplications() {
+        try {
+            PackageManager pm = getPackageManager();
+            installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            installedAppsCount = installedApps.size();
+        } catch (Exception e) {
+            installedAppsCount = 0;
+            installedApps = new ArrayList<>();
+        }
     }
 
     private void initSpeechRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            if (speechRecognizer != null) {
+                speechRecognizer.destroy();
+            }
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
-                @Override public void onReadyForSpeech(Bundle params) {}
+                @Override public void onReadyForSpeech(Bundle params) {
+                    Toast.makeText(MainActivity.this, "Слушаю вас...", Toast.LENGTH_SHORT).show();
+                }
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
@@ -113,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(int error) {
-                    Toast.makeText(MainActivity.this, "Не удалось распознать речь. Попробуйте еще раз.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Не удалось распознать речь (ошибка " + error + ")", Toast.LENGTH_SHORT).show();
                 }
 
                 @Override public void onResults(Bundle results) {
@@ -132,13 +181,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startVoiceListening() {
-        if (speechRecognizer == null) {
-            initSpeechRecognizer();
-        }
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Говорите команду...");
         try {
+            if (speechRecognizer == null) {
+                initSpeechRecognizer();
+            }
             speechRecognizer.startListening(intent);
         } catch (Exception e) {
             Toast.makeText(this, "Ошибка запуска микрофона", Toast.LENGTH_SHORT).show();
@@ -159,32 +209,44 @@ public class MainActivity extends AppCompatActivity {
     private void processUserCommand(String query) {
         String lower = query.toLowerCase();
         String response;
+        boolean appOpened = false;
 
-        if (lower.contains("привет") || lower.contains("здарова")) {
-            response = "Привет, Костя! Рада тебя слышать.";
-        } else if (lower.contains("как дела") || lower.contains("как ты")) {
-            response = "Системы функционируют в штатном режиме!";
+        // Проверяем, не просит ли пользователь открыть конкретное приложение
+        if (lower.contains("открой")) {
+            String appNameQuery = lower.replace("открой", "").trim();
+            PackageManager pm = getPackageManager();
+            for (ApplicationInfo app : installedApps) {
+                String label = pm.getApplicationLabel(app).toString().toLowerCase();
+                if (label.contains(appNameQuery)) {
+                    Intent launchIntent = pm.getLaunchIntentForPackage(app.packageName);
+                    if (launchIntent != null) {
+                        startActivity(launchIntent);
+                        response = "Открываю приложение: " + pm.getApplicationLabel(app);
+                        appOpened = true;
+                        break;
+                    }
+                }
+            }
+            if (!appOpened) {
+                response = "Приложение \"" + appNameQuery + "\" не найдено среди " + installedAppsCount + " установленных.";
+            }
+        } else if (lower.contains("привет") || lower.contains("здарова")) {
+            response = "Привет, Костя! Все системы в норме.";
+        } else if (lower.contains("сколько приложений")) {
+            response = "На твоем устройстве установлено " + installedAppsCount + " приложений.";
         } else if (lower.contains("время") || lower.contains("час")) {
             String time = android.text.format.DateFormat.format("HH:mm", new java.util.Date()).toString();
             response = "Текущее время: " + time;
-        } else if (lower.contains("открой браузер") || lower.contains("зайди в интернет") || lower.contains("гугл")) {
+        } else if (lower.contains("браузер") || lower.contains("интернет") || lower.contains("гугл")) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"));
             startActivity(intent);
             response = "Открываю браузер.";
-        } else if (lower.contains("камера") || lower.contains("сделай фото")) {
+        } else if (lower.contains("камера")) {
             Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            if (intent.resolveActivity(getPackageManager()) != null) {
-                startActivity(intent);
-                response = "Открываю камеру.";
-            } else {
-                response = "Камера недоступна.";
-            }
-        } else if (lower.contains("позвони")) {
-            Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"));
             startActivity(intent);
-            response = "Открываю телефонную книгу.";
+            response = "Открываю камеру.";
         } else {
-            response = "Я получила запрос: \"" + query + "\". Выполняю анализ!";
+            response = "Запрос принят: \"" + query << "\". Выполняю анализ!";
         }
 
         addMessageToChat("L.I.R.A.: " + response, Gravity.START);
@@ -222,19 +284,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_RECORD_AUDIO_PERMISSION) {
-            if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                Toast.makeText(this, "Для голосовых команд нужен доступ к микрофону!", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         applyVoicePreference();
+        // Когда возвращаемся в приложение — убираем фоновый сервис с шариком
+        stopService(new Intent(this, LiraBackgroundService.class));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Когда сворачиваем приложение в фон — запускаем фоновый сервис с плавающим шариком
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(new Intent(this, LiraBackgroundService.class));
+        } else {
+            startService(new Intent(this, LiraBackgroundService.class));
+        }
     }
 
     @Override
@@ -246,6 +311,7 @@ public class MainActivity extends AppCompatActivity {
             tts.stop();
             tts.shutdown();
         }
+        stopService(new Intent(this, LiraBackgroundService.class));
         super.onDestroy();
     }
 }
