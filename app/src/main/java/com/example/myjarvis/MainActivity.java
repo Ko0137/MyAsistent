@@ -59,12 +59,10 @@ public class MainActivity extends AppCompatActivity {
         chatScrollView = findViewById(R.id.chatScrollView);
         etInput = findViewById(R.id.etInput);
 
-        // Проверяем разрешение на микрофон
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO_PERMISSION);
         }
 
-        // Инициализация TTS
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru", "RU"));
@@ -78,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Инициализация распознавания речи
         initSpeechRecognizer();
 
         btnSettings.setOnClickListener(v -> {
@@ -119,11 +116,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Не удалось распознать речь. Попробуйте еще раз.", Toast.LENGTH_SHORT).show();
                 }
 
-                @Override
-                public void results(Bundle results) {}
-
-                @Override
-                public void onResults(Bundle results) {
+                @Override public void onResults(Bundle results) {
                     ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
                         String spokenText = matches.get(0);
@@ -148,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             speechRecognizer.startListening(intent);
         } catch (Exception e) {
-            Toast.makeText(this, "Ошибка запуска микрофона", Toast.LENGTH_SHORT).exec();
+            Toast.makeText(this, "Ошибка запуска микрофона", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -163,11 +156,9 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
-    // Обработка команд и выполнение реальных действий
     private void processUserCommand(String query) {
         String lower = query.toLowerCase();
-        String response = "";
-        boolean actionExecuted = false;
+        String response;
 
         if (lower.contains("привет") || lower.contains("здарова")) {
             response = "Привет, Костя! Рада тебя слышать.";
@@ -180,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"));
             startActivity(intent);
             response = "Открываю браузер.";
-            actionExecuted = true;
         } else if (lower.contains("камера") || lower.contains("сделай фото")) {
             Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             if (intent.resolveActivity(getPackageManager()) != null) {
@@ -189,15 +179,12 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 response = "Камера недоступна.";
             }
-            actionExecuted = true;
         } else if (lower.contains("позвони")) {
-            // Извлекаем номер или имя, если есть
             Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"));
             startActivity(intent);
             response = "Открываю телефонную книгу.";
-            actionExecuted = true;
         } else {
-            response = "Я получила запрос: \"" + query << "\". Выполняю анализ!";
+            response = "Я получила запрос: \"" + query + "\". Выполняю анализ!";
         }
 
         addMessageToChat("L.I.R.A.: " + response, Gravity.START);
