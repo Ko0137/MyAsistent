@@ -1,31 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:layout_height="match_parent" android:layout_width="match_parent" android:orientation="vertical" android:padding="16dp" xmlns:android="[http://schemas.android.com/apk/res/android](http://schemas.android.com/apk/res/android)">
+<LinearLayout android:background="?android:attr/colorBackground" android:layout_height="match_parent" android:layout_width="match_parent" android:orientation="vertical" android:padding="16dp" xmlns:android="[http://schemas.android.com/apk/res/android](http://schemas.android.com/apk/res/android)" xmlns:app="[http://schemas.android.com/apk/res-auto](http://schemas.android.com/apk/res-auto)">
 
-    <TextView android:gravity="center" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="12dp" android:text="L.I.R.A. Assistant" android:textColor="?android:attr/textColorPrimary" android:textSize="24sp" android:textStyle="bold"/>
+    <!-- Заголовок -->
+    <RelativeLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="12dp">
+        
+        <TextView android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="L.I.R.A. System" android:textColor="#00E676" android:textSize="22sp" android:textStyle="bold"/>
 
-    <!-- Панель настроек -->
-    <LinearLayout android:background="?android:attr/colorBackgroundFloating" android:elevation="4dp" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:layout_width="match_parent" android:orientation="vertical" android:padding="12dp">
+        <TextView android:id="@+id/statusText" android:layout_alignParentEnd="true" android:layout_height="wrap_content" android:layout_width="wrap_content" android:padding="4dp" android:text="ONLINE" android:textColor="#00E676" android:textSize="12sp" android:textStyle="bold"/>
+    </RelativeLayout>
 
-        <Switch android:id="@+id/switchTheme" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="8dp" android:text="Тёмная тема"/>
+    <!-- Панель управления -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp">
 
-        <Switch android:id="@+id/switchWidget" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="8dp" android:text="Плавающий виджет (поверх окон)"/>
+        <LinearLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:orientation="vertical" android:padding="12dp">
 
-        <Switch android:id="@+id/switchVoice" android:layout_height="wrap_content" android:layout_width="match_parent" android:text="Озвучивать ответы (TTS)"/>
-    </LinearLayout>
+            <Switch android:id="@+id/switchTheme" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="6dp" android:text="Тёмная тема"/>
 
-    <!-- Чат -->
-    <ScrollView android:background="?android:attr/colorBackgroundFloating" android:elevation="2dp" android:id="@+id/chatScroll" android:layout_height="0dp" android:layout_marginBottom="12dp" android:layout_weight="1" android:layout_width="match_parent" android:padding="12dp">
+            <Switch android:id="@+id/switchWidget" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="6dp" android:text="Плавающий виджет поверх окон"/>
 
-        <TextView android:id="@+id/chatLog" android:layout_height="wrap_content" android:layout_width="match_parent" android:textColor="?android:attr/textColorPrimary" android:textSize="15sp"/>
-    </ScrollView>
+            <Switch android:id="@+id/switchVoice" android:layout_height="wrap_content" android:layout_width="match_parent" android:text="Голосовые ответы (TTS)"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
-    <!-- Ввод -->
+    <!-- Окно диалога -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp">
+
+        <ScrollView android:id="@+id/chatScroll" android:layout_height="match_parent" android:layout_width="match_parent" android:padding="12dp">
+
+            <TextView android:id="@+id/chatLog" android:layout_height="wrap_content" android:layout_width="match_parent" android:lineSpacingExtra="4dp" android:textSize="15sp"/>
+        </ScrollView>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Панель ввода и голосовой активатор -->
     <LinearLayout android:gravity="center_vertical" android:layout_height="wrap_content" android:layout_width="match_parent" android:orientation="horizontal">
 
-        <EditText android:background="?android:attr/editTextBackground" android:hint="Сообщение..." android:id="@+id/inputMessage" android:layout_height="wrap_content" android:layout_weight="1" android:layout_width="0dp"/>
+        <EditText android:background="@android:drawable/editbox_background" android:hint="Введите команду..." android:id="@+id/inputMessage" android:layout_height="48dp" android:layout_weight="1" android:layout_width="0dp" android:paddingEnd="12dp" android:paddingStart="12dp"/>
 
-        <Button android:background="?android:attr/selectableItemBackground" android:id="@+id/micButton" android:layout_height="48dp" android:layout_marginStart="4dp" android:layout_width="48dp" android:text="🎤" android:textSize="20sp"/>
+        <Button android:backgroundTint="#00E676" android:id="@+id/micButton" android:layout_height="54dp" android:layout_marginStart="6dp" android:layout_width="54dp" android:text="🎙️" android:textSize="22sp"/>
 
-        <Button android:id="@+id/sendButton" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:layout_width="wrap_content" android:text="Отправить"/>
+        <Button android:id="@+id/sendButton" android:layout_height="54dp" android:layout_marginStart="4dp" android:layout_width="wrap_content" android:text="➤" android:textSize="18sp"/>
     </LinearLayout>
 </LinearLayout>
