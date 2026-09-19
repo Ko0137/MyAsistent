@@ -4,6 +4,7 @@
 # See the end of the file for more details and warnings about common mistakes.
 
 [app]
+android.accept_sdk_license = True
 
 # (str) Title of your application
 title = My Application
@@ -495,4 +496,3 @@ warn_on_root = 1
 #        buildozer --profile demo android debug
 #
 #   Environment variable overrides have priority over profile overrides.
-android.accept_sdk_license = True
