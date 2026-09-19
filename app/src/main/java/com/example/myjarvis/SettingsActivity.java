@@ -11,6 +11,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 
 public class SettingsActivity extends AppCompatActivity {
     @Override
@@ -29,21 +30,45 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Загружаем сохраненные настройки
         SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
-        themeSwitch.setChecked(prefs.getBoolean("theme_dark", true));
-        voiceSwitch.setChecked(prefs.getBoolean("voice_female", true));
-        quietSwitch.setChecked(prefs.getBoolean("quiet_mode", false));
+        boolean isDarkTheme = prefs.getBoolean("theme_dark", true);
+        boolean isFemaleVoice = prefs.getBoolean("voice_female", true);
+        boolean isQuietMode = prefs.getBoolean("quiet_mode", false);
 
-        // Показываем красивое всплывающее окно с политикой конфиденциальности
+        themeSwitch.setChecked(isDarkTheme);
+        voiceSwitch.setChecked(isFemaleVoice);
+        quietSwitch.setChecked(isQuietMode);
+
+        // Обработка переключения темы в реальном времени
+        themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("theme_dark", isChecked);
+            editor.apply();
+
+            if (isChecked) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+        });
+
+        // Обработка переключения голоса
+        voiceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("voice_female", isChecked);
+            editor.apply();
+        });
+
+        // Обработка тихого режима
+        quietSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("quiet_mode", isChecked);
+            editor.apply();
+        });
+
+        // Показываем всплывающее окно с политикой конфиденциальности
         privacyPolicyLink.setOnClickListener(v -> showPrivacyPolicyDialog());
 
         backButton.setOnClickListener(v -> {
-            // Сохраняем состояние переключателей
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putBoolean("theme_dark", themeSwitch.isChecked());
-            editor.putBoolean("voice_female", voiceSwitch.isChecked());
-            editor.putBoolean("quiet_mode", quietSwitch.isChecked());
-            editor.apply();
-
             Toast.makeText(this, "Настройки сохранены!", Toast.LENGTH_SHORT).show();
             finish();
         });
@@ -54,7 +79,6 @@ public class SettingsActivity extends AppCompatActivity {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_privacy_policy);
         
-        // Делаем фон диалога прозрачным, чтобы были видны закругления нашего макета
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
