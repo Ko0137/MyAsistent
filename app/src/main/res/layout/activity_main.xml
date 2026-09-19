@@ -2,22 +2,22 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#050505"
-    android:padding="16dp">
+    android:background="#0A0A0C">
 
+    <!-- Верхняя панель управления -->
     <LinearLayout
-        android:id="@+id/topPanel"
+        android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="16dp">
+        android:padding="16dp"
+        android:gravity="center_vertical">
         
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="J.A.R.V.I.S. INTERFACE"
+            android:text="L.I.R.A."
             android:textColor="#00E5FF"
             android:textSize="20sp"
             android:textStyle="bold" />
@@ -27,71 +27,81 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Виджет "
-            android:textColor="#00E5FF" />
-            
+            android:textColor="#FFF"/>
+
         <Button
             android:id="@+id/voiceBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="#222222"
             android:text="Голос"
-            android:textColor="#00E5FF" />
+            android:textSize="12sp"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#333333"
+            android:textColor="#00E5FF"/>
+            
+        <Button
+            android:id="@+id/policyBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Политика"
+            android:textSize="12sp"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#333333"
+            android:textColor="#00E5FF"/>
     </LinearLayout>
 
+    <!-- Область чата -->
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/topPanel"
-        android:layout_above="@id/bottomPanel">
+        android:layout_above="@id/bottomBar"
+        android:layout_below="@id/topBar"
+        android:padding="16dp">
         
         <TextView
             android:id="@+id/chatDisplay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="> Инициализация...\n"
-            android:textColor="#00E5FF"
-            android:textSize="16sp"
-            android:fontFamily="monospace" />
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
     </ScrollView>
 
+    <!-- Нижняя панель ввода -->
     <LinearLayout
-        android:id="@+id/bottomPanel"
+        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="16dp">
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
         <Button
             android:id="@+id/micButton"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:backgroundTint="#00E5FF"
-            android:text="🎙️"
-            android:textSize="24sp"
-            android:textColor="#000000" />
-            
+            android:text="🎤" />
+
         <EditText
             android:id="@+id/inputField"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:hint="Текстовая команда..."
-            android:textColorHint="#444444"
+            android:textColorHint="#888888"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#00E5FF" />
-            
+            android:backgroundTint="#00E5FF"/>
+
         <Button
             android:id="@+id/sendButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="#222222"
-            android:text="Ввод"
-            android:textColor="#00E5FF" />
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:backgroundTint="#333333"
+            android:text="➤"
+            android:textColor="#00E5FF"/>
     </LinearLayout>
 </RelativeLayout>
