@@ -29,6 +29,7 @@ import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
@@ -52,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
     private EditText inputMessage;
     private TextView statusText;
-    private ImageButton micButton, btnSettings;
+    private ImageButton micButton, btnSettings, btnHelp;
     private Button sendButton;
 
     private SharedPreferences prefs;
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         statusText = findViewById(R.id.statusText);
         micButton = findViewById(R.id.micButton);
         btnSettings = findViewById(R.id.btnSettings);
+        btnHelp = findViewById(R.id.btnHelp);
         sendButton = findViewById(R.id.sendButton);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
@@ -92,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerViewChat.setAdapter(chatAdapter);
 
         checkPermissions();
+        checkFirstLaunchPrivacy();
 
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
@@ -103,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
         loadHistory();
 
         if (messageList.isEmpty()) {
-            addMessage("L.I.R.A.: Все системы активны. Готова к работе, " + userName + "!", false);
+            addMessage("L.I.R.A.: Все системы активны. Нажми '?' сверху для просмотра списка команд!", false);
         }
 
         sendButton.setOnClickListener(v -> {
@@ -132,6 +135,25 @@ public class MainActivity extends AppCompatActivity {
             vibrate(30);
             showSettingsDialog();
         });
+
+        btnHelp.setOnClickListener(v -> {
+            vibrate(30);
+            showHelpDialog();
+        });
+    }
+
+    private void checkFirstLaunchPrivacy() {
+        boolean accepted = prefs.getBoolean("privacy_accepted", false);
+        if (!accepted) {
+            new AlertDialog.Builder(this)
+                .setTitle("🔒 Конфиденциальность L.I.R.A.")
+                .setMessage("Все ваши данные, голос и заметки обрабатываются строго локально на вашем устройстве и НЕ передаются на сторонние серверы.\n\nПродолжая, вы соглашаетесь с Политикой конфиденциальности.")
+                .setPositiveButton("Принять", (dialog, which) -> {
+                    prefs.edit().putBoolean("privacy_accepted", true).apply();
+                })
+                .setCancelable(false)
+                .show();
+        }
     }
 
     private void startListening() {
@@ -200,35 +222,42 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     response = "Приложение \"" + appQuery + "\" не найдено.";
                 }
-            } else if (lower.contains("фонарик")) {
+            } else if (containsAny(lower, "фонарик", "свет", "подсвети", "вспышка")) {
                 CameraManager camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
                 String cameraId = camManager.getCameraIdList()[0];
                 isTorchOn = !isTorchOn;
                 camManager.setTorchMode(cameraId, isTorchOn);
                 response = isTorchOn ? "Фонарик включен." : "Фонарик выключен.";
-            } else if (lower.contains("батарея") || lower.contains("заряд")) {
+            } else if (containsAny(lower, "батарея", "заряд", "аккумулятор")) {
                 IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
                 Intent batteryStatus = registerReceiver(null, ifilter);
                 int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
                 response = "Текущий уровень заряда аккумулятора: " + level + "%.";
-            } else if (lower.contains("пауза") || lower.contains("музыка") || lower.contains("плей")) {
+            } else if (containsAny(lower, "пауза", "музыка", "плей", "стоп трек")) {
                 AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
                 response = "Управление медиаплеером выполнено.";
-            } else if (lower.contains("заметка")) {
-                String note = text.replaceFirst("(?i).*заметка", "").trim();
-                if (!note.isEmpty()) {
-                    prefs.edit().putString("quick_note", note).apply();
-                    response = "Заметка сохранена: \"" + note + "\"";
+            } else if (lower.contains("прочитай заметки") || lower.contains("покажи заметки")) {
+                String notes = prefs.getString("notes_list", "Заметок пока нет.");
+                response = "Сохраненные заметки:\n" + notes;
+            } else if (lower.contains("очисти заметки") || lower.contains("удали заметки")) {
+                prefs.edit().remove("notes_list").apply();
+                response = "Все заметки удалены.";
+            } else if (lower.startsWith("заметка")) {
+                String newNote = text.replaceFirst("(?i)^заметка", "").trim();
+                if (!newNote.isEmpty()) {
+                    String existing = prefs.getString("notes_list", "");
+                    String updated = existing.isEmpty() ? "• " + newNote : existing + "\n• " + newNote;
+                    prefs.edit().putString("notes_list", updated).apply();
+                    response = "Добавлена заметка: \"" + newNote + "\"";
                 } else {
-                    String saved = prefs.getString("quick_note", "Заметок пока нет.");
-                    response = "Сохраненная заметка: " + saved;
+                    response = "Скажи: 'Заметка [твой текст]' чтобы добавить.";
                 }
-            } else if (lower.contains("привет")) {
+            } else if (containsAny(lower, "привет", "здравствуй", "хей")) {
                 response = "Привет, " + userName + "! Я на связи.";
             } else {
-                response = "Принято: " + text;
+                response = "Команда принята: " + text;
             }
         } catch (Exception e) {
             response = "Ошибка выполнения: " + e.getMessage();
@@ -238,6 +267,13 @@ public class MainActivity extends AppCompatActivity {
         if (isVoiceEnabled && tts != null) {
             tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
         }
+    }
+
+    private boolean containsAny(String input, String... keywords) {
+        for (String kw : keywords) {
+            if (input.contains(kw)) return true;
+        }
+        return false;
     }
 
     private String openAppByName(String query) {
@@ -295,6 +331,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void showHelpDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_help, null);
+        Button btnClose = view.findViewById(R.id.btnCloseHelp);
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
     private void showSettingsDialog() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = getLayoutInflater().inflate(R.layout.dialog_settings, null);
@@ -319,21 +364,31 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "История очищена", Toast.LENGTH_SHORT).show();
         });
 
+        switchWidget.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                    Toast.makeText(this, "Включите разрешение 'Отображение поверх других окон'", Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            }
+        });
+
         btnSave.setOnClickListener(v -> {
             boolean dark = switchTheme.isChecked();
+            boolean widgetEnabled = switchWidget.isChecked();
+
             prefs.edit().putBoolean("dark_theme", dark).apply();
             prefs.edit().putBoolean("voice_enabled", switchVoice.isChecked()).apply();
-            prefs.edit().putBoolean("widget_enabled", switchWidget.isChecked()).apply();
+            prefs.edit().putBoolean("widget_enabled", widgetEnabled).apply();
             isVoiceEnabled = switchVoice.isChecked();
 
             userName = etUserName.getText().toString().trim();
             if (userName.isEmpty()) userName = "Пользователь";
             prefs.edit().putString("user_name", userName).apply();
 
-            if (switchWidget.isChecked()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                    startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
-                } else {
+            if (widgetEnabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
                     startService(new Intent(this, LiraBackgroundService.class));
                 }
             } else {
