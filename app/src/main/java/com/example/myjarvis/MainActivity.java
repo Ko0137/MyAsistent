@@ -4,8 +4,8 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.SearchManager;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -13,18 +13,18 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.ScrollView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class MainActivity extends Activity {
 
@@ -32,12 +32,17 @@ public class MainActivity extends Activity {
     private EditText inputField;
     private ScrollView scrollView;
     private Button micButton;
+    private Switch widgetSwitch;
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
     private Animation pulseAnimation;
     
-    // Карта для хранения названий и пакетов приложений
-    private Map<String, String> installedApps = new HashMap<>();
+    private SharedPreferences prefs;
+    private String userName;
+    private boolean isWaitingForName = false;
+    
+    private List<Voice> ruVoices = new ArrayList<>();
+    private int currentVoiceIndex = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,26 +53,47 @@ public class MainActivity extends Activity {
         inputField = findViewById(R.id.inputField);
         scrollView = findViewById(R.id.scrollView);
         Button sendButton = findViewById(R.id.sendButton);
+        Button voiceBtn = findViewById(R.id.voiceBtn);
         micButton = findViewById(R.id.micButton);
+        widgetSwitch = findViewById(R.id.widgetSwitch);
         pulseAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse);
+        
+        prefs = getSharedPreferences("JarvisPrefs", MODE_PRIVATE);
+        userName = prefs.getString("UserName", null);
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
         }
 
-        if (!Settings.canDrawOverlays(this)) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-            startActivityForResult(intent, 2);
-        } else {
-            startService(new Intent(this, FloatingWidgetService.class));
-        }
-        
-        // Сканируем приложения при запуске
-        scanInstalledApps();
+        widgetSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                if (!Settings.canDrawOverlays(this)) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                    startActivityForResult(intent, 2);
+                    widgetSwitch.setChecked(false);
+                } else {
+                    startService(new Intent(this, FloatingWidgetService.class));
+                }
+            } else {
+                stopService(new Intent(this, FloatingWidgetService.class));
+            }
+        });
 
         tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) tts.setLanguage(new Locale("ru"));
+            if (status == TextToSpeech.SUCCESS) {
+                tts.setLanguage(new Locale("ru"));
+                loadVoices();
+                
+                if (userName == null) {
+                    isWaitingForName = true;
+                    respond("Привет! Я твой новый голосовой ассистент. Как мне тебя называть?");
+                } else {
+                    respond("Системы в норме. С возвращением, " + userName + ".");
+                }
+            }
         });
+        
+        voiceBtn.setOnClickListener(v -> changeVoice());
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         Intent speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -113,18 +139,21 @@ public class MainActivity extends Activity {
         handleAutoListen(getIntent());
     }
     
-    private void scanInstalledApps() {
-        PackageManager pm = getPackageManager();
-        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> apps = pm.queryIntentActivities(mainIntent, 0);
-        
-        for (ResolveInfo info : apps) {
-            String appName = info.loadLabel(pm).toString().toLowerCase();
-            String packageName = info.activityInfo.packageName;
-            installedApps.put(appName, packageName);
-        }
-        appendMessage("Система", "Просканировано " + installedApps.size() + " приложений.");
+    private void loadVoices() {
+        try {
+            for (Voice tmpVoice : tts.getVoices()) {
+                if (tmpVoice.getLocale().getLanguage().equals("ru")) {
+                    ruVoices.add(tmpVoice);
+                }
+            }
+        } catch (Exception e) {}
+    }
+    
+    private void changeVoice() {
+        if (ruVoices.isEmpty()) return;
+        currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
+        tts.setVoice(ruVoices.get(currentVoiceIndex));
+        respond("Голос изменен. Как вам такое звучание?");
     }
 
     private void stopMicAnim() {
@@ -146,107 +175,58 @@ public class MainActivity extends Activity {
     }
 
     private void processCommand(String command) {
+        if (isWaitingForName) {
+            userName = command;
+            prefs.edit().putString("UserName", userName).apply();
+            isWaitingForName = false;
+            respond("Приятно познакомиться, " + userName + ". Теперь я готов выполнять ваши команды.");
+            return;
+        }
+
         String lowerCmd = command.toLowerCase().trim();
         
-        // Поиск в Ютубе
-        if (lowerCmd.startsWith("найди в ютубе") || lowerCmd.startsWith("найди на ютубе")) {
-            String query = lowerCmd.replace("найди в ютубе", "").replace("найди на ютубе", "").trim();
-            searchYoutube(query);
+        // Звонки
+        if (lowerCmd.startsWith("позвони")) {
+            String number = lowerCmd.replaceAll("[^0-9+]", "");
+            if (!number.isEmpty()) {
+                respond("Открываю набор номера " + number);
+                Intent intent = new Intent(Intent.ACTION_DIAL);
+                intent.setData(Uri.parse("tel:" + number));
+                startActivity(intent);
+            } else {
+                respond("Продиктуйте номер телефона после слова позвони.");
+            }
             return;
         }
         
-        // Поиск в Гугле / Интернете
-        if (lowerCmd.startsWith("найди в гугле") || lowerCmd.startsWith("найди ")) {
-            String query = lowerCmd.replace("найди в гугле", "").replace("найди ", "").trim();
-            searchWeb(query);
+        // Поиск
+        if (lowerCmd.startsWith("найди ")) {
+            String query = lowerCmd.replace("найди ", "").trim();
+            respond("Ищу: " + query);
+            Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
+            intent.putExtra(SearchManager.QUERY, query);
+            startActivity(intent);
             return;
         }
 
-        // Написание сообщений в Телеграм
-        if (lowerCmd.contains("напиши") && lowerCmd.contains("телеграм")) {
-            // Вырезаем текст сообщения (все, что идет после слова "что" или просто берем остаток)
-            String message = "";
-            if (lowerCmd.contains(" что ")) {
-                message = lowerCmd.substring(lowerCmd.indexOf(" что ") + 5).trim();
-            } else {
-                message = lowerCmd.substring(lowerCmd.indexOf("телеграм") + 8).trim();
-            }
-            sendTelegramMessage(message);
+        // Сообщения в мессенджеры
+        if (lowerCmd.contains("напиши")) {
+            String message = lowerCmd.replace("напиши ", "").trim();
+            respond("Подготавливаю сообщение...");
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_TEXT, message);
+            startActivity(Intent.createChooser(intent, "Выберите приложение для отправки"));
             return;
         }
         
-        // Открытие приложений
-        if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ")) {
-            String targetApp = lowerCmd.replace("открой ", "").replace("запусти ", "").trim();
-            
-            // Ищем точное или частичное совпадение в сканированных приложениях
-            String foundPackage = null;
-            String foundAppName = null;
-            
-            for (Map.Entry<String, String> entry : installedApps.entrySet()) {
-                if (entry.getKey().contains(targetApp) || targetApp.contains(entry.getKey())) {
-                    foundPackage = entry.getValue();
-                    foundAppName = entry.getKey();
-                    break;
-                }
-            }
-            
-            if (foundPackage != null) {
-                openApp(foundPackage, foundAppName);
-            } else {
-                respond("Я просканировал устройство, но не нашел приложения с названием " + targetApp);
-            }
-            return;
-        }
-        
-        if (lowerCmd.contains("привет")) { respond("Приветствую, сэр."); } 
-        else { respond("Команда не распознана: " + command); }
-    }
-    
-    private void searchWeb(String query) {
-        respond("Ищу " + query + " в интернете.");
-        Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
-        intent.putExtra(SearchManager.QUERY, query);
-        startActivity(intent);
-    }
-    
-    private void searchYoutube(String query) {
-        respond("Ищу " + query + " на YouTube.");
-        Intent intent = new Intent(Intent.ACTION_SEARCH);
-        intent.setPackage("com.google.android.youtube");
-        intent.putExtra("query", query);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try {
-            startActivity(intent);
-        } catch (Exception e) {
-            searchWeb(query + " youtube"); // Резервный вариант, если Ютуб не установлен
+        if (lowerCmd.contains("привет")) { 
+            respond("Приветствую, " + userName + "."); 
+        } else { 
+            respond("Команда не распознана. Попробуйте 'Найди...', 'Позвони...' или 'Напиши...'."); 
         }
     }
     
-    private void sendTelegramMessage(String text) {
-        respond("Открываю Телеграм для отправки сообщения.");
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/plain");
-        intent.setPackage("org.telegram.messenger");
-        intent.putExtra(Intent.EXTRA_TEXT, text);
-        try {
-            startActivity(intent);
-        } catch (Exception e) {
-            respond("Телеграм не установлен на устройстве.");
-        }
-    }
-    
-    private void openApp(String packageName, String appName) {
-        PackageManager pm = getPackageManager();
-        Intent intent = pm.getLaunchIntentForPackage(packageName);
-        if (intent != null) {
-            respond("Открываю " + appName);
-            startActivity(intent);
-        } else {
-            respond("Не удалось запустить " + appName);
-        }
-    }
-
     private void respond(String text) {
         appendMessage("J.A.R.V.I.S.", text);
         if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
