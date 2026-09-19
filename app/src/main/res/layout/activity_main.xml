@@ -6,6 +6,7 @@
     android:padding="16dp">
 
     <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
@@ -14,7 +15,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Jarvis: Система активирована.\n"
-            android:textSize="16sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"/>
     </ScrollView>
 
     <LinearLayout
@@ -28,12 +30,20 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Введи команду..." />
+            android:hint="Команда..." />
 
         <Button
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Отправить" />
+            android:text="Текст" />
+
+        <Button
+            android:id="@+id/micButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎙️"
+            android:backgroundTint="#D32F2F"
+            android:textColor="#FFFFFF"/>
     </LinearLayout>
 </LinearLayout>
