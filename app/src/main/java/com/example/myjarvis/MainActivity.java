@@ -208,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void processUserCommand(String query) {
         String lower = query.toLowerCase();
-        String response;
+        String response = "";
         boolean appOpened = false;
 
         // Проверяем, не просит ли пользователь открыть конкретное приложение
