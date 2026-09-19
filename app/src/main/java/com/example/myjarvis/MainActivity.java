@@ -5,7 +5,10 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Bundle;
 import android.provider.Settings;
+import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
@@ -13,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -22,6 +26,8 @@ public class MainActivity extends AppCompatActivity {
     private Switch switchVoice;
     private SharedPreferences prefs;
     private String userName = "";
+    private TextToSpeech tts;
+    private static final int VOICE_RECOG_REQUEST_CODE = 123;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,39 +44,38 @@ public class MainActivity extends AppCompatActivity {
         prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         userName = prefs.getString("user_name", "");
 
-        // Проверяем, знакомы ли мы с пользователем
-        if (userName.isEmpty()) {
-            askForUserName();
+        // Инициализация офлайн синтеза речи (TTS)
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                tts.setLanguage(new Locale("ru", "RU"));
+            }
+        });
+
+        // Загрузка сохраненной истории чата
+        String savedHistory = prefs.getString("chat_history", "");
+        if (!savedHistory.isEmpty()) {
+            chatLog.setText(savedHistory);
         } else {
-            chatLog.setText("L.I.R.A.: Привет, " + userName + "! Чем я могу помочь сегодня?\n");
+            if (userName.isEmpty()) {
+                askForUserName();
+            } else {
+                appendChat("L.I.R.A.: Привет, " + userName + "! Чем я могу помочь сегодня?");
+            }
         }
 
         // Обработка текстового ввода
         sendButton.setOnClickListener(v -> {
             String text = inputMessage.getText().toString().trim();
             if (!text.isEmpty()) {
-                chatLog.append(userName + ": " + text + "\n");
-                
-                // Простая логика обработки команд
-                String lower = text.toLowerCase();
-                if (lower.contains("открой") || lower.contains("запусти")) {
-                    chatLog.append("L.I.R.A.: Выполняю запрос...\n");
-                    // Здесь можно добавить открытие приложений или URL
-                } else {
-                    chatLog.append("L.I.R.A.: Я услышала вас, " + userName + "! Обрабатываю...\n");
-                }
-                
+                processUserCommand(text);
                 inputMessage.setText("");
             }
         });
 
-        // Кнопка микрофона
-        micButton.setOnClickListener(v -> {
-            chatLog.append("L.I.R.A.: Голосовой ввод активирован (слушаю)...\n");
-            Toast.makeText(this, "Слушаю ваш голос...", Toast.LENGTH_SHORT).show();
-        });
+        // Кнопка офлайн голосового ввода
+        micButton.setOnClickListener(v -> startVoiceRecognition());
 
-        // Управление плавающим виджетом через настройки
+        // Переключатель плавающего виджета
         if (switchWidget != null) {
             switchWidget.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
@@ -90,17 +95,69 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+    }
 
-        // Управление голосовой активацией
-        if (switchVoice != null) {
-            switchVoice.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked) {
-                    Toast.makeText(this, "Голосовая активация включена", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "Голосовая активация выключена", Toast.LENGTH_SHORT).show();
-                }
-            });
+    private void startVoiceRecognition() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажите команду для L.I.R.A....");
+        try {
+            startActivityForResult(intent, VOICE_RECOG_REQUEST_CODE);
+        } catch (Exception e) {
+            Toast.makeText(this, "Голосовой ввод недоступен на этом устройстве", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == VOICE_RECOG_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+            java.util.ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (result != null && !result.isEmpty()) {
+                String spokenText = result.get(0);
+                processUserCommand(spokenText);
+            }
+        }
+    }
+
+    private void processUserCommand(String text) {
+        appendChat(userName + ": " + text);
+        String lower = text.toLowerCase();
+        String response;
+
+        if (lower.contains("как тебя зовут") || lower.contains("кто ты")) {
+            response = "Я L.I.R.A., твой персональный офлайн-ассистент.";
+        } else if (lower.contains("как меня зовут")) {
+            response = "Твое имя — " + userName + "!";
+        } else if (lower.contains("время") || lower.contains("который час")) {
+            String time = android.text.format.DateFormat.format("HH:mm", new java.util.Date()).toString();
+            response = "Сейчас " + time + ".";
+        } else if (lower.contains("открой браузер") || lower.contains("поиск")) {
+            response = "Открываю браузер...";
+            try {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com"));
+                startActivity(browserIntent);
+            } catch (Exception e) {
+                response = "Не удалось открыть браузер.";
+            }
+        } else {
+            response = "Я поняла тебя, " + userName + "! Локальный режим активен, интернет не требуется.";
+        }
+
+        appendChat("L.I.R.A.: " + response);
+        speakOut(response);
+    }
+
+    private void speakOut(String text) {
+        if (tts != null) {
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+    }
+
+    private void appendChat(String message) {
+        chatLog.append(message + "\n");
+        prefs.edit().putString("chat_history", chatLog.getText().toString()).apply();
     }
 
     private void askForUserName() {
@@ -117,10 +174,21 @@ public class MainActivity extends AppCompatActivity {
                 userName = "Друг";
             }
             prefs.edit().putString("user_name", userName).apply();
-            chatLog.setText("L.I.R.A.: Приятно познакомиться, " + userName + "! Чем я могу помочь?\n");
+            String welcome = "Приятно познакомиться, " + userName + "! Чем я могу помочь?";
+            appendChat("L.I.R.A.: " + welcome);
+            speakOut(welcome);
         });
 
         builder.setCancelable(false);
         builder.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+        super.onDestroy();
     }
 }
