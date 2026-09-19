@@ -1,49 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:background="#050505"
     android:padding="16dp">
+
+    <TextView
+        android:id="@+id/header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:text="J.A.R.V.I.S. INTERFACE"
+        android:textColor="#00E5FF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingBottom="16dp" />
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent"
+        android:layout_below="@id/header"
+        android:layout_above="@id/bottomPanel">
+        
         <TextView
             android:id="@+id/chatDisplay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Jarvis: Система активирована.\n"
-            android:textSize="18sp"
-            android:textColor="#333333"/>
+            android:text="> Инициализация ядра...\n> Система готова.\n"
+            android:textColor="#00E5FF"
+            android:textSize="16sp"
+            android:fontFamily="monospace" />
     </ScrollView>
 
     <LinearLayout
+        android:id="@+id/bottomPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:orientation="horizontal"
-        android:paddingTop="8dp">
+        android:gravity="center_vertical"
+        android:paddingTop="16dp">
 
+        <Button
+            android:id="@+id/micButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:backgroundTint="#00E5FF"
+            android:text="🎙️"
+            android:textSize="24sp"
+            android:textColor="#000000" />
+            
         <EditText
             android:id="@+id/inputField"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Команда..." />
-
+            android:layout_marginStart="12dp"
+            android:hint="Текстовая команда..."
+            android:textColorHint="#444444"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#00E5FF" />
+            
         <Button
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Текст" />
-
-        <Button
-            android:id="@+id/micButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🎙️"
-            android:backgroundTint="#D32F2F"
-            android:textColor="#FFFFFF"/>
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#222222"
+            android:text="Ввод"
+            android:textColor="#00E5FF" />
     </LinearLayout>
-</LinearLayout>
+</RelativeLayout>

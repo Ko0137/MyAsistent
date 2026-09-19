@@ -36,20 +36,16 @@ public class MainActivity extends Activity {
         Button sendButton = findViewById(R.id.sendButton);
         Button micButton = findViewById(R.id.micButton);
 
-        // Запрос прав на микрофон
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
         }
 
-        // Инициализация говорилки (TTS)
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru"));
-                speak("Здравствуйте, Костя. Я готов к работе.");
             }
         });
 
-        // Инициализация слушалки (SpeechRecognizer)
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         Intent speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -60,7 +56,7 @@ public class MainActivity extends Activity {
             @Override public void onBeginningOfSpeech() {}
             @Override public void onRmsChanged(float rmsdB) {}
             @Override public void onBufferReceived(byte[] buffer) {}
-            @Override public void onEndOfSpeech() { inputField.setHint("Команда..."); }
+            @Override public void onEndOfSpeech() { inputField.setHint("Ожидание..."); }
             @Override public void onError(int error) { appendMessage("Система", "Ошибка распознавания"); }
             @Override public void onPartialResults(Bundle partialResults) {}
             @Override public void onEvent(int eventType, Bundle params) {}
@@ -70,7 +66,7 @@ public class MainActivity extends Activity {
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
                     String recognizedText = matches.get(0);
-                    appendMessage("Ты (Голос)", recognizedText);
+                    appendMessage("USER", recognizedText);
                     processCommand(recognizedText);
                 }
             }
@@ -79,7 +75,7 @@ public class MainActivity extends Activity {
         sendButton.setOnClickListener(v -> {
             String text = inputField.getText().toString().trim();
             if (!text.isEmpty()) {
-                appendMessage("Ты", text);
+                appendMessage("USER", text);
                 inputField.setText("");
                 processCommand(text);
             }
@@ -90,25 +86,44 @@ public class MainActivity extends Activity {
 
     private void processCommand(String command) {
         String lowerCmd = command.toLowerCase();
-        String response = "Команда не распознана.";
-
-        if (lowerCmd.contains("привет")) {
-            response = "Приветствую! Чем могу помочь?";
-        } else if (lowerCmd.contains("как дела") || lowerCmd.contains("статус")) {
-            response = "Системы работают в штатном режиме. Заряд в норме.";
-        } else if (lowerCmd.contains("спасибо")) {
-            response = "Всегда к вашим услугам.";
-        } else if (lowerCmd.contains("пока") || lowerCmd.contains("отключись")) {
-            response = "Отключаю питание. До свидания.";
-        } else {
-            response = "Я услышал: " + command + ". Но я пока не умею это выполнять.";
+        
+        if (lowerCmd.contains("открой") || lowerCmd.contains("запусти")) {
+            if (lowerCmd.contains("телеграм")) {
+                openApp("org.telegram.messenger", "Телеграм");
+            } else if (lowerCmd.contains("ютуб") || lowerCmd.contains("youtube")) {
+                openApp("com.google.android.youtube", "YouTube");
+            } else if (lowerCmd.contains("камеру")) {
+                openApp("com.google.android.GoogleCamera", "Камера");
+            } else if (lowerCmd.contains("настройки")) {
+                openApp("com.android.settings", "Настройки");
+            } else {
+                respond("Приложение не найдено в моей базе.");
+            }
+            return;
         }
 
-        appendMessage("Jarvis", response);
-        speak(response);
+        if (lowerCmd.contains("привет")) {
+            respond("Приветствую, сэр.");
+        } else if (lowerCmd.contains("статус")) {
+            respond("Все системы в норме.");
+        } else {
+            respond("Команда не распознана: " + command);
+        }
+    }
+    
+    private void openApp(String packageName, String appName) {
+        PackageManager pm = getPackageManager();
+        Intent intent = pm.getLaunchIntentForPackage(packageName);
+        if (intent != null) {
+            respond("Открываю " + appName);
+            startActivity(intent);
+        } else {
+            respond("Не удалось найти " + appName + " на устройстве.");
+        }
     }
 
-    private void speak(String text) {
+    private void respond(String text) {
+        appendMessage("J.A.R.V.I.S.", text);
         if (tts != null) {
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         }
@@ -116,7 +131,7 @@ public class MainActivity extends Activity {
 
     private void appendMessage(String sender, String message) {
         String currentText = chatDisplay.getText().toString();
-        chatDisplay.setText(currentText + "\n" + sender + ": " + message + "\n");
+        chatDisplay.setText(currentText + "\n[" + sender + "] " + message);
         scrollView.post(() -> scrollView.fullScroll(ScrollView.FOCUS_DOWN));
     }
 
