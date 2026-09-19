@@ -2,53 +2,58 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0C">
+    android:background="#05050A">
 
+    <!-- Верхняя панель статуса -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:background="#0B0B14">
         
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="L.I.R.A."
-            android:textColor="#00E5FF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:text="L.I.R.A. v1.5"
+            android:textColor="#00FFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"/>
 
         <Switch
             android:id="@+id/widgetSwitch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Виджет "
-            android:textColor="#FFF"/>
+            android:text="Виджет"
+            android:textColor="#A0A0C0"
+            android:theme="@ThemeOverlay.AppCompat.Dark"/>
 
         <Button
             android:id="@+id/voiceBtn"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:text="Голос"
-            android:textSize="12sp"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="#333333"
-            android:textColor="#00E5FF"/>
+            android:textSize="11sp"
+            android:layout_marginStart="6dp"
+            android:background="#151525"
+            android:textColor="#00FFFF"/>
             
         <Button
             android:id="@+id/policyBtn"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Политика"
-            android:textSize="12sp"
-            android:layout_marginStart="8dp"
-            android:backgroundTint="#333333"
-            android:textColor="#00E5FF"/>
+            android:layout_height="36dp"
+            android:text=" Info "
+            android:textSize="11sp"
+            android:layout_marginStart="6dp"
+            android:background="#151525"
+            android:textColor="#00FFFF"/>
     </LinearLayout>
 
+    <!-- Область чата с псевдо-терминальным выводом -->
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
@@ -61,44 +66,54 @@
             android:id="@+id/chatDisplay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:textColor="#00FF66"
+            android:textSize="14sp"
+            android:fontFamily="monospace"
+            android:text="[System] Secure neural link initialized.\n[System] Zero data retention policy: ACTIVE."/>
     </ScrollView>
 
+    <!-- Нижняя панель управления с неоновой кнопкой микрофона -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="#0B0B14">
 
         <Button
             android:id="@+id/micButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:backgroundTint="#00E5FF"
-            android:text="🎤" />
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="#00FFFF"
+            android:text="🎤"
+            android:textSize="20sp"
+            android:textColor="#000000"/>
 
         <EditText
             android:id="@+id/inputField"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:hint="Текстовая команда..."
-            android:textColorHint="#888888"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:hint="Введите команду для Лиры..."
+            android:textColorHint="#505070"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#00E5FF"/>
+            android:textSize="14sp"
+            android:background="#121222"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"/>
 
         <Button
             android:id="@+id/sendButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:backgroundTint="#333333"
+            android:background="#151525"
             android:text="➤"
-            android:textColor="#00E5FF"/>
+            android:textColor="#00FFFF"
+            android:textSize="18sp"/>
     </LinearLayout>
 </RelativeLayout>
