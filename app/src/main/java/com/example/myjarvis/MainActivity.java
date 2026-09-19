@@ -105,9 +105,12 @@ public class MainActivity extends AppCompatActivity {
         setupSpeechRecognizer();
         loadHistory();
 
+        // Приветственное сообщение с количеством доступных приложений (не сохраняется в историю)
+        int appCount = getLaunchableAppsCount();
         if (messageList.isEmpty()) {
-            addMessage("L.I.R.A.: Все системы активны. Нажми '?' сверху для просмотра списка команд!", false);
+            addMessage("L.I.R.A.: Все системы активны. Нажми '?' сверху для просмотра списка команд!", false, true);
         }
+        addMessage("Инфо: Найдено " + appCount + " приложений, доступных для голосового запуска.", false, false);
 
         sendButton.setOnClickListener(v -> {
             vibrate(30);
@@ -141,6 +144,13 @@ public class MainActivity extends AppCompatActivity {
             showHelpDialog();
         });
     }
+    
+    private int getLaunchableAppsCount() {
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> pkgAppsList = getPackageManager().queryIntentActivities(mainIntent, 0);
+        return pkgAppsList != null ? pkgAppsList.size() : 0;
+    }
 
     private void checkFirstLaunchPrivacy() {
         boolean accepted = prefs.getBoolean("privacy_accepted", false);
@@ -166,20 +176,27 @@ public class MainActivity extends AppCompatActivity {
             statusText.setText("LISTENING");
             statusText.setBackgroundColor(0xFFD32F2F);
             micButton.setBackgroundResource(R.drawable.bg_mic_active);
+        } else {
+            setupSpeechRecognizer();
+            startListening();
         }
     }
 
     private void stopListening() {
+        isListening = false;
+        statusText.setText("READY");
+        statusText.setBackgroundColor(0xFF1B4D3E);
+        micButton.setBackgroundResource(R.drawable.bg_mic_btn);
+        
         if (speechRecognizer != null) {
             speechRecognizer.stopListening();
-            isListening = false;
-            statusText.setText("READY");
-            statusText.setBackgroundColor(0xFF1B4D3E);
-            micButton.setBackgroundResource(R.drawable.bg_mic_btn);
         }
     }
 
     private void setupSpeechRecognizer() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+        }
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
@@ -187,8 +204,14 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
-                @Override public void onEndOfSpeech() { stopListening(); }
-                @Override public void onError(int error) { stopListening(); }
+                @Override public void onEndOfSpeech() { 
+                    stopListening(); 
+                }
+                @Override public void onError(int error) { 
+                    stopListening();
+                    // Полностью пересоздаем распознаватель при ошибке, чтобы избежать "залипания"
+                    setupSpeechRecognizer();
+                }
                 @Override public void onResults(Bundle results) {
                     stopListening();
                     ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
@@ -203,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void processCommand(String text) {
-        addMessage(text, true);
+        addMessage(text, true, true);
         String lower = text.toLowerCase().trim();
         String response = "";
 
@@ -263,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
             response = "Ошибка выполнения: " + e.getMessage();
         }
 
-        addMessage(response, false);
+        addMessage(response, false, true);
         if (isVoiceEnabled && tts != null) {
             tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
         }
@@ -294,17 +317,23 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    private void addMessage(String text, boolean isUser) {
+    // Новый метод добавления сообщения с флагом сохранения
+    private void addMessage(String text, boolean isUser, boolean saveToHistory) {
         String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
         messageList.add(new ChatMessage(text, isUser, time));
         chatAdapter.notifyItemInserted(messageList.size() - 1);
         recyclerViewChat.smoothScrollToPosition(messageList.size() - 1);
-        saveHistory();
+        if (saveToHistory) {
+            saveHistory();
+        }
     }
 
     private void saveHistory() {
         StringBuilder sb = new StringBuilder();
         for (ChatMessage msg : messageList) {
+            // Защита от сохранения временных системных уведомлений
+            if (msg.getMessage().startsWith("Инфо: Найдено")) continue;
+            
             sb.append(msg.isUser() ? "1" : "0")
               .append(";")
               .append(msg.getTime())
