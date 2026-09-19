@@ -4,7 +4,6 @@
     android:layout_height="match_parent"
     android:background="#05050A">
 
-    <!-- Верхняя панель статуса -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
@@ -18,7 +17,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="L.I.R.A. v1.5"
+            android:text="L.I.R.A. v1.8"
             android:textColor="#00FFFF"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -29,8 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Виджет"
-            android:textColor="#A0A0C0"
-            android:theme="@ThemeOverlay.AppCompat.Dark"/>
+            android:textColor="#A0A0C0"/>
 
         <Button
             android:id="@+id/voiceBtn"
@@ -53,7 +51,6 @@
             android:textColor="#00FFFF"/>
     </LinearLayout>
 
-    <!-- Область чата с псевдо-терминальным выводом -->
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
@@ -69,10 +66,9 @@
             android:textColor="#00FF66"
             android:textSize="14sp"
             android:fontFamily="monospace"
-            android:text="[System] Secure neural link initialized.\n[System] Zero data retention policy: ACTIVE."/>
+            android:text="[System] Neural link active.\n[System] Ready for voice commands."/>
     </ScrollView>
 
-    <!-- Нижняя панель управления с неоновой кнопкой микрофона -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
@@ -99,7 +95,7 @@
             android:layout_weight="1"
             android:layout_marginStart="10dp"
             android:layout_marginEnd="10dp"
-            android:hint="Введите команду для Лиры..."
+            android:hint="Команда для Лиры..."
             android:textColorHint="#505070"
             android:textColor="#FFFFFF"
             android:textSize="14sp"

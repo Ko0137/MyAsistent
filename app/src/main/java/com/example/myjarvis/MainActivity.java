@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Лира, твой персональный ассистент. Данные не сохраняются. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -107,14 +107,14 @@ public class MainActivity extends Activity {
             @Override public void onBeginningOfSpeech() {}
             @Override public void onRmsChanged(float rmsdB) {}
             @Override public void onBufferReceived(byte[] buffer) {}
-            @Override public void onEndOfSpeech() { inputField.setHint("Текстовая команда..."); }
-            @Override public void onError(int error) { inputField.setHint("Текстовая команда..."); }
+            @Override public void onEndOfSpeech() { inputField.setHint("Команда для Лиры..."); }
+            @Override public void onError(int error) { inputField.setHint("Команда для Лиры..."); }
             @Override public void onPartialResults(Bundle partialResults) {}
             @Override public void onEvent(int eventType, Bundle params) {}
 
             @Override
             public void onResults(Bundle results) {
-                inputField.setHint("Текстовая команда...");
+                inputField.setHint("Команда для Лиры...");
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
                     String recognizedText = matches.get(0);
@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
         if (ruVoices.isEmpty()) return;
         currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
         tts.setVoice(ruVoices.get(currentVoiceIndex));
-        respond("Голосовой модуль изменен.");
+        respond("Голос синтеза изменен.");
     }
 
     @Override
@@ -172,77 +172,56 @@ public class MainActivity extends Activity {
     private void processCommand(String command) {
         if (isWaitingForName) {
             userName = command;
-        prefs.edit().putString("UserName", userName).apply();
+            prefs.edit().putString("UserName", userName).apply();
             isWaitingForName = false;
-            respond("Рад знакомству, " + userName + ". Протоколы инициализации завершены.");
+            respond("Принято, " + userName + ".");
             return;
         }
 
         String lowerCmd = command.toLowerCase().trim();
         
-        // 1. Команда открытия приложений ("открой [название]", "запусти [название]")
+        // Открытие приложений
         if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ")) {
             String appSearch = lowerCmd.replace("открой ", "").replace("запусти ", "").trim();
             if (openAppByName(appSearch)) {
                 respond("Открываю " + appSearch);
             } else {
-                respond("Не удалось найти приложение с именем " + appSearch);
+                respond("Приложение не найдено: " + appSearch);
             }
             return;
         }
 
-        // 2. Сканирование приложений
-        if (lowerCmd.contains("сколько приложений") || lowerCmd.contains("какие приложения")) {
-            Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
-            mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-            List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
-            respond("На устройстве найдено " + pkgList.size() + " приложений. Данные не сохраняются.");
-            return;
-        }
-
-        // 3. Звонки
-        if (lowerCmd.startsWith("позвони")) {
-            String number = lowerCmd.replaceAll("[^0-9+]", "");
-            if (!number.isEmpty()) {
-                respond("Набираю номер " + number);
-                Intent intent = new Intent(Intent.ACTION_DIAL);
-                intent.setData(Uri.parse("tel:" + number));
-                startActivity(intent);
-            } else {
-                respond("Укажите номер телефона для вызова.");
-            }
-            return;
-        }
-        
-        // 4. Поиск в интернете
+        // Поиск
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
-            respond("Выполняю поиск: " + query);
+            respond("Ищу: " + query);
             Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
             intent.putExtra(SearchManager.QUERY, query);
             startActivity(intent);
             return;
         }
 
-        // 5. Отправка текста
-        if (lowerCmd.contains("напиши")) {
-            String message = lowerCmd.replace("напиши ", "").trim();
-            respond("Открываю приложения для отправки...");
-            Intent intent = new Intent(Intent.ACTION_SEND);
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT, message);
-            startActivity(Intent.createChooser(intent, "Отправить через"));
+        // Звонки
+        if (lowerCmd.startsWith("позвони")) {
+            String number = lowerCmd.replaceAll("[^0-9+]", "");
+            if (!number.isEmpty()) {
+                respond("Набор номера...");
+                Intent intent = new Intent(Intent.ACTION_DIAL);
+                intent.setData(Uri.parse("tel:" + number));
+                startActivity(intent);
+            } else {
+                respond("Укажите номер.");
+            }
             return;
         }
         
         if (lowerCmd.contains("привет")) { 
-            respond("Здравствуйте, " + userName + "."); 
+            respond("Приветствую, " + userName + "."); 
         } else { 
-            respond("Команда не распознана. Используйте: 'Открой...', 'Найди...', 'Позвони...' или 'Сколько приложений'."); 
+            respond("Команда не распознана. Доступно: 'Открой...', 'Найди...', 'Позвони...'."); 
         }
     }
 
-    // Метод для интеллектуального поиска и запуска нужного приложения по имени
     private boolean openAppByName(String query) {
         Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
