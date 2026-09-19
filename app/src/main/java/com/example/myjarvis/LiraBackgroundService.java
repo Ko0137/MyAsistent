@@ -3,7 +3,6 @@ package com.example.myjarvis;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
@@ -16,12 +15,11 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
-import androidx.core.app.NotificationCompat;
 
 public class LiraBackgroundService extends Service {
+
     private WindowManager windowManager;
-    private View floatingWidget;
-    private WindowManager.LayoutParams params;
+    private View floatingView;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -32,60 +30,53 @@ public class LiraBackgroundService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-
-        Notification notification = new NotificationCompat.Builder(this, "LiraChannel")
-                .setContentTitle("L.I.R.A. в фоне")
-                .setContentText("Голосовой помощник активен")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setContentIntent(pendingIntent)
+        
+        Notification notification = new Notification.Builder(this, "lira_channel")
+                .setContentTitle("L.I.R.A. активна")
+                .setContentText("Нажмите для управления ассистентом")
+                .setSmallIcon(android.R.drawable.ic_menu_mic)
                 .build();
 
         startForeground(1, notification);
+        initFloatingWidget();
+    }
 
-        // Создаем плавающий шарик поверх всех окон
+    private void initFloatingWidget() {
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        floatingWidget = LayoutInflater.from(this).inflate(R.layout.floating_widget, null);
+        
+        // Создаем плавающую кнопку
+        floatingView = LayoutInflater.from(this).inflate(R.layout.floating_widget, null);
 
-        int layoutFlag;
+        int LAYOUT_FLAG;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            layoutFlag = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         } else {
-            layoutFlag = WindowManager.LayoutParams.TYPE_PHONE;
+            LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
         }
 
-        params = new WindowManager.LayoutParams(
+        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
+                LAYOUT_FLAG,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-        );
+                PixelFormat.TRANSLUCENT);
 
-        params.gravity = Gravity.TOP | Gravity.END;
-        params.x = 50;
-        params.y = 200;
+        params.gravity = Gravity.TOP | Gravity.START;
+        params.x = 100;
+        params.y = 100;
 
-        try {
-            windowManager.addView(floatingWidget, params);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        Button btnFab = floatingWidget.findViewById(R.id.btnFloatingMic);
-        btnFab.setOnClickListener(v -> {
-            Toast.makeText(this, "L.I.R.A. слушает из фона...", Toast.LENGTH_SHORT).show();
-            // Возвращаем в MainActivity для обработки голосового запроса
-            Intent mainIntent = new Intent(this, MainActivity.class);
-            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            mainIntent.putExtra("start_voice", true);
-            startActivity(mainIntent);
+        // Обработка нажатия на плавающий виджет (запуск прослушивания)
+        Button fab = floatingView.findViewById(R.id.fab_widget);
+        fab.setOnClickListener(v -> {
+            Toast.makeText(this, "L.I.R.A. слушаю команду...", Toast.LENGTH_SHORT).show();
+            // Здесь можно запустить логику распознавания или открыть MainActivity
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
         });
 
-        // Перетаскивание шарика по экрану
-        floatingWidget.setOnTouchListener(new View.OnTouchListener() {
+        // Перетаскивание виджета по экрану
+        fab.setOnTouchListener(new View.OnTouchListener() {
             private int initialX;
             private int initialY;
             private float initialTouchX;
@@ -101,21 +92,27 @@ public class LiraBackgroundService extends Service {
                         initialTouchY = event.getRawY();
                         return true;
                     case MotionEvent.ACTION_MOVE:
-                        params.x = initialX - (int) (event.getRawX() - initialTouchX);
+                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
                         params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(floatingWidget, params);
+                        windowManager.updateViewLayout(floatingView, params);
                         return true;
                 }
                 return false;
             }
         });
+
+        try {
+            windowManager.addView(floatingView, params);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
-                    "LiraChannel",
-                    "L.I.R.A. Background Service Channel",
+                    "lira_channel",
+                    "L.I.R.A. Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -128,8 +125,8 @@ public class LiraBackgroundService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (floatingWidget != null && windowManager != null) {
-            windowManager.removeView(floatingWidget);
+        if (floatingView != null && windowManager != null) {
+            windowManager.removeView(floatingView);
         }
     }
 }
