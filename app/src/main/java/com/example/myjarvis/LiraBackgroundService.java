@@ -34,7 +34,7 @@ public class LiraBackgroundService extends Service {
         Notification notification = new Notification.Builder(this, "lira_channel")
                 .setContentTitle("L.I.R.A. активна")
                 .setContentText("Нажмите для управления ассистентом")
-                .setSmallIcon(android.R.drawable.ic_menu_mic)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
 
         startForeground(1, notification);
