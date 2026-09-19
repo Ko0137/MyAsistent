@@ -1,54 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:background="?android:attr/colorBackground" android:layout_height="match_parent" android:layout_width="match_parent" android:orientation="vertical" android:padding="16dp" xmlns:android="[http://schemas.android.com/apk/res/android](http://schemas.android.com/apk/res/android)" xmlns:app="[http://schemas.android.com/apk/res-auto](http://schemas.android.com/apk/res-auto)">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical"
+    android:padding="12dp">
 
-    <!-- Заголовок -->
-    <RelativeLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="12dp">
-        
-        <TextView android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="L.I.R.A. System" android:textColor="#00E676" android:textSize="22sp" android:textStyle="bold"/>
-
-        <TextView android:id="@+id/statusText" android:layout_alignParentEnd="true" android:layout_height="wrap_content" android:layout_width="wrap_content" android:padding="4dp" android:text="ONLINE" android:textColor="#00E676" android:textSize="12sp" android:textStyle="bold"/>
-    </RelativeLayout>
-
-    <!-- Панель управления -->
-    <androidx.cardview.widget.CardView
+    <!-- Премиум Шапка -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp">
+        android:paddingBottom="8dp">
 
-        <LinearLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:orientation="vertical" android:padding="12dp">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <Switch android:id="@+id/switchTheme" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="6dp" android:text="Тёмная тема"/>
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_lira_logo" />
 
-            <Switch android:id="@+id/switchWidget" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="6dp" android:text="Плавающий виджет поверх окон"/>
-
-            <Switch android:id="@+id/switchVoice" android:layout_height="wrap_content" android:layout_width="match_parent" android:text="Голосовые ответы (TTS)"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="L.I.R.A. AI"
+                android:textColor="#00E676"
+                android:textSize="20sp"
+                android:textStyle="bold" />
         </LinearLayout>
-    </androidx.cardview.widget.CardView>
 
-    <!-- Окно диалога -->
-    <androidx.cardview.widget.CardView
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:background="#1B4D3E"
+                android:paddingStart="8dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="4dp"
+                android:text="READY"
+                android:textColor="#00E676"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:src="@android:drawable/ic_menu_preferences" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- Список сообщений (RecyclerView) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewChat"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp">
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
-        <ScrollView android:id="@+id/chatScroll" android:layout_height="match_parent" android:layout_width="match_parent" android:padding="12dp">
+    <!-- Нижняя Панель со стильной реактивной кнопкой -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="4dp">
 
-            <TextView android:id="@+id/chatLog" android:layout_height="wrap_content" android:layout_width="match_parent" android:lineSpacingExtra="4dp" android:textSize="15sp"/>
-        </ScrollView>
-    </androidx.cardview.widget.CardView>
+        <EditText
+            android:id="@+id/inputMessage"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@android:drawable/editbox_background"
+            android:hint="Спроси или дай команду..."
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textSize="15sp" />
 
-    <!-- Панель ввода и голосовой активатор -->
-    <LinearLayout android:gravity="center_vertical" android:layout_height="wrap_content" android:layout_width="match_parent" android:orientation="horizontal">
+        <FrameLayout
+            android:id="@+id/micContainer"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="6dp">
 
-        <EditText android:background="@android:drawable/editbox_background" android:hint="Введите команду..." android:id="@+id/inputMessage" android:layout_height="48dp" android:layout_weight="1" android:layout_width="0dp" android:paddingEnd="12dp" android:paddingStart="12dp"/>
+            <ImageButton
+                android:id="@+id/micButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_mic_btn"
+                android:contentDescription="Mic"
+                android:src="@android:drawable/ic_btn_speak_now" />
+        </FrameLayout>
 
-        <Button android:backgroundTint="#00E676" android:id="@+id/micButton" android:layout_height="54dp" android:layout_marginStart="6dp" android:layout_width="54dp" android:text="🎙️" android:textSize="22sp"/>
-
-        <Button android:id="@+id/sendButton" android:layout_height="54dp" android:layout_marginStart="4dp" android:layout_width="wrap_content" android:text="➤" android:textSize="18sp"/>
+        <Button
+            android:id="@+id/sendButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:backgroundTint="#00E676"
+            android:text="➤"
+            android:textColor="#000000"
+            android:textSize="18sp" />
     </LinearLayout>
 </LinearLayout>

@@ -5,108 +5,30 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.Toast;
+import androidx.core.app.NotificationCompat;
 
 public class LiraBackgroundService extends Service {
-
-    private WindowManager windowManager;
-    private View floatingView;
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+    private static final String CHANNEL_ID = "LiraServiceChannel";
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        
-        Notification notification = new Notification.Builder(this, "lira_channel")
-                .setContentTitle("L.I.R.A. активна")
-                .setContentText("Плавающий виджет запущен")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("L.I.R.A. Активна")
+                .setContentText("Фоновый режим включен")
+                .setSmallIcon(R.drawable.ic_lira_logo)
                 .build();
-
         startForeground(1, notification);
-        initFloatingWidget();
-    }
-
-    private void initFloatingWidget() {
-        try {
-            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-            floatingView = LayoutInflater.from(this).inflate(R.layout.floating_widget, null);
-
-            int LAYOUT_FLAG;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-            } else {
-                LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_PHONE;
-            }
-
-            final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    LAYOUT_FLAG,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    PixelFormat.TRANSLUCENT);
-
-            params.gravity = Gravity.TOP | Gravity.START;
-            params.x = 100;
-            params.y = 200;
-
-            Button fab = floatingView.findViewById(R.id.fab_widget);
-            fab.setOnClickListener(v -> {
-                Toast.makeText(this, "L.I.R.A.: Начинаем диалог!", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                intent.putExtra("start_voice", true);
-                startActivity(intent);
-            });
-
-            fab.setOnTouchListener(new View.OnTouchListener() {
-                private int initialX, initialY;
-                private float initialTouchX, initialTouchY;
-
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            initialX = params.x;
-                            initialY = params.y;
-                            initialTouchX = event.getRawX();
-                            initialTouchY = event.getRawY();
-                            return true;
-                        case MotionEvent.ACTION_MOVE:
-                            params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                            params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                            windowManager.updateViewLayout(floatingView, params);
-                            return true;
-                    }
-                    return false;
-                }
-            });
-
-            windowManager.addView(floatingView, params);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
-                    "lira_channel",
-                    "L.I.R.A. Service Channel",
+                    CHANNEL_ID,
+                    "LIRA Background Service",
                     NotificationManager.IMPORTANCE_LOW
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -117,14 +39,12 @@ public class LiraBackgroundService extends Service {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (floatingView != null && windowManager != null) {
-            try {
-                windowManager.removeView(floatingView);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 }

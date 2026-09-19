@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.hardware.camera2.CameraManager;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -21,9 +22,10 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ScrollView;
+import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,17 +34,27 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
+    private RecyclerView recyclerViewChat;
+    private ChatAdapter chatAdapter;
+    private List<ChatMessage> messageList = new ArrayList<>();
+
     private EditText inputMessage;
-    private TextView chatLog, statusText;
-    private ScrollView chatScroll;
-    private Switch switchTheme, switchWidget, switchVoice;
-    private Button micButton, sendButton;
+    private TextView statusText;
+    private ImageButton micButton, btnSettings;
+    private Button sendButton;
 
     private SharedPreferences prefs;
     private String userName = "";
@@ -63,22 +75,22 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        recyclerViewChat = findViewById(R.id.recyclerViewChat);
         inputMessage = findViewById(R.id.inputMessage);
-        chatLog = findViewById(R.id.chatLog);
-        chatScroll = findViewById(R.id.chatScroll);
         statusText = findViewById(R.id.statusText);
-        switchTheme = findViewById(R.id.switchTheme);
-        switchWidget = findViewById(R.id.switchWidget);
-        switchVoice = findViewById(R.id.switchVoice);
         micButton = findViewById(R.id.micButton);
+        btnSettings = findViewById(R.id.btnSettings);
         sendButton = findViewById(R.id.sendButton);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-        userName = prefs.getString("user_name", "");
+        userName = prefs.getString("user_name", "Пользователь");
         isVoiceEnabled = prefs.getBoolean("voice_enabled", true);
 
-        switchTheme.setChecked(isDark);
-        switchVoice.setChecked(isVoiceEnabled);
+        chatAdapter = new ChatAdapter(this, messageList);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setStackFromEnd(true);
+        recyclerViewChat.setLayoutManager(layoutManager);
+        recyclerViewChat.setAdapter(chatAdapter);
 
         checkPermissions();
 
@@ -89,14 +101,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         setupSpeechRecognizer();
+        loadHistory();
 
-        String history = prefs.getString("chat_history", "");
-        if (!history.isEmpty()) {
-            chatLog.setText(history);
-        } else if (userName.isEmpty()) {
-            askForUserName();
-        } else {
-            appendChat("L.I.R.A.: Привет, " + userName + "! Система готова к работе.");
+        if (messageList.isEmpty()) {
+            if (userName.equals("Пользователь")) {
+                askForUserName();
+            } else {
+                addMessage("L.I.R.A.: Все системы активны. Готова к работе, " + userName + "!", false);
+            }
         }
 
         sendButton.setOnClickListener(v -> {
@@ -115,42 +127,39 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             if (!isListening) {
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
-                speechRecognizer.startListening(intent);
-                micButton.setText("🔴");
-                statusText.setText("LISTENING...");
+                startListening();
             } else {
-                speechRecognizer.stopListening();
-                micButton.setText("🎙️");
-                statusText.setText("ONLINE");
+                stopListening();
             }
         });
 
-        switchTheme.setOnCheckedChangeListener((btn, isChecked) -> {
-            prefs.edit().putBoolean("dark_theme", isChecked).apply();
-            AppCompatDelegate.setDefaultNightMode(isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        btnSettings.setOnClickListener(v -> {
+            vibrate(30);
+            showSettingsDialog();
         });
+    }
 
-        switchVoice.setOnCheckedChangeListener((btn, isChecked) -> {
-            isVoiceEnabled = isChecked;
-            prefs.edit().putBoolean("voice_enabled", isChecked).apply();
-        });
+    private void startListening() {
+        if (speechRecognizer != null) {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+            speechRecognizer.startListening(intent);
+            isListening = true;
+            statusText.setText("LISTENING");
+            statusText.setBackgroundColor(0xFF2E7D32);
+        }
+    }
 
-        switchWidget.setOnCheckedChangeListener((btn, isChecked) -> {
-            if (isChecked) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                    Toast.makeText(this, "Предоставьте разрешение поверх других окон", Toast.LENGTH_LONG).show();
-                    startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
-                    switchWidget.setChecked(false);
-                } else {
-                    startService(new Intent(this, LiraBackgroundService.class));
-                }
-            } else {
-                stopService(new Intent(this, LiraBackgroundService.class));
-            }
-        });
+    private void stopListening() {
+        if (speechRecognizer != null) {
+            speechRecognizer.stopListening();
+            isListening = false;
+            micButton.setScaleX(1.0f);
+            micButton.setScaleY(1.0f);
+            statusText.setText("READY");
+            statusText.setBackgroundColor(0xFF1B4D3E);
+        }
     }
 
     private void setupSpeechRecognizer() {
@@ -159,22 +168,18 @@ public class MainActivity extends AppCompatActivity {
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) { isListening = true; }
                 @Override public void onBeginningOfSpeech() {}
-                @Override public void onRmsChanged(float rmsdB) {}
+                @Override public void onRmsChanged(float rmsdB) {
+                    if (isListening) {
+                        float scale = 1.0f + Math.max(0, rmsdB) / 12.0f;
+                        micButton.setScaleX(scale);
+                        micButton.setScaleY(scale);
+                    }
+                }
                 @Override public void onBufferReceived(byte[] buffer) {}
-                @Override public void onEndOfSpeech() { 
-                    isListening = false; 
-                    micButton.setText("🎙️");
-                    statusText.setText("ONLINE");
-                }
-                @Override public void onError(int error) { 
-                    isListening = false; 
-                    micButton.setText("🎙️");
-                    statusText.setText("ONLINE");
-                }
+                @Override public void onEndOfSpeech() { stopListening(); }
+                @Override public void onError(int error) { stopListening(); }
                 @Override public void onResults(Bundle results) {
-                    isListening = false; 
-                    micButton.setText("🎙️");
-                    statusText.setText("ONLINE");
+                    stopListening();
                     ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
                         processCommand(matches.get(0));
@@ -184,6 +189,174 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onEvent(int eventType, Bundle params) {}
             });
         }
+    }
+
+    private void processCommand(String text) {
+        addMessage(text, true);
+        String lower = text.toLowerCase().trim();
+        String response = "";
+
+        try {
+            if (lower.startsWith("открой ") || lower.startsWith("запусти ")) {
+                String appQuery = lower.replaceFirst("^(открой|запусти)\\s+", "").trim();
+                String launched = openAppByName(appQuery);
+                if (launched != null) {
+                    response = launched;
+                } else if (appQuery.contains("камера")) {
+                    startActivity(new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA));
+                    response = "Открываю камеру.";
+                } else if (appQuery.contains("браузер")) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com")));
+                    response = "Открываю браузер.";
+                } else {
+                    response = "Приложение \"" + appQuery + "\" не найдено.";
+                }
+            } else if (lower.contains("фонарик")) {
+                CameraManager camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                String cameraId = camManager.getCameraIdList()[0];
+                isTorchOn = !isTorchOn;
+                camManager.setTorchMode(cameraId, isTorchOn);
+                response = isTorchOn ? "Фонарик включен." : "Фонарик выключен.";
+            } else if (lower.contains("батарея") || lower.contains("заряд")) {
+                IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+                Intent batteryStatus = registerReceiver(null, ifilter);
+                int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
+                response = "Текущий уровень заряда аккумулятора: " + level + "%.";
+            } else if (lower.contains("пауза") || lower.contains("музыка") || lower.contains("плей")) {
+                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+                audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+                response = "Управление медиаплеером выполнено.";
+            } else if (lower.contains("заметка")) {
+                String note = text.replaceFirst("(?i).*заметка", "").trim();
+                if (!note.isEmpty()) {
+                    prefs.edit().putString("quick_note", note).apply();
+                    response = "Заметка сохранена: \"" + note + "\"";
+                } else {
+                    String saved = prefs.getString("quick_note", "Заметок пока нет.");
+                    response = "Сохраненная заметка: " + saved;
+                }
+            } else if (lower.contains("привет")) {
+                response = "Привет, " + userName + "! Я на связи.";
+            } else {
+                response = "Принято: " + text;
+            }
+        } catch (Exception e) {
+            response = "Ошибка выполнения: " + e.getMessage();
+        }
+
+        addMessage(response, false);
+        if (isVoiceEnabled && tts != null) {
+            tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+    }
+
+    private String openAppByName(String query) {
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> pkgAppsList = getPackageManager().queryIntentActivities(mainIntent, 0);
+
+        for (ResolveInfo ri : pkgAppsList) {
+            String appName = ri.loadLabel(getPackageManager()).toString().toLowerCase();
+            if (appName.contains(query)) {
+                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(ri.activityInfo.packageName);
+                if (launchIntent != null) {
+                    startActivity(launchIntent);
+                    return "Запускаю " + ri.loadLabel(getPackageManager());
+                }
+            }
+        }
+        return null;
+    }
+
+    private void addMessage(String text, boolean isUser) {
+        String time = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
+        messageList.add(new ChatMessage(text, isUser, time));
+        chatAdapter.notifyItemInserted(messageList.size() - 1);
+        recyclerViewChat.smoothScrollToPosition(messageList.size() - 1);
+        saveHistory();
+    }
+
+    private void saveHistory() {
+        StringBuilder sb = new StringBuilder();
+        for (ChatMessage msg : messageList) {
+            sb.append(msg.isUser() ? "1" : "0")
+              .append(";")
+              .append(msg.getTime())
+              .append(";")
+              .append(msg.getMessage().replace("\n", " "))
+              .append("\n");
+        }
+        prefs.edit().putString("chat_history_v2", sb.toString()).apply();
+    }
+
+    private void loadHistory() {
+        String history = prefs.getString("chat_history_v2", "");
+        if (!history.isEmpty()) {
+            messageList.clear();
+            String[] lines = history.split("\n");
+            for (String line : lines) {
+                String[] parts = line.split(";", 3);
+                if (parts.length == 3) {
+                    boolean isUser = parts[0].equals("1");
+                    messageList.add(new ChatMessage(parts[2], isUser, parts[1]));
+                }
+            }
+            chatAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void showSettingsDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_settings, null);
+
+        Switch switchTheme = view.findViewById(R.id.switchTheme);
+        Switch switchVoice = view.findViewById(R.id.switchVoice);
+        Switch switchWidget = view.findViewById(R.id.switchWidget);
+        EditText etUserName = view.findViewById(R.id.etUserName);
+        Button btnClearChat = view.findViewById(R.id.btnClearChat);
+        Button btnSave = view.findViewById(R.id.btnSaveSettings);
+
+        switchTheme.setChecked(prefs.getBoolean("dark_theme", true));
+        switchVoice.setChecked(isVoiceEnabled);
+        switchWidget.setChecked(prefs.getBoolean("widget_enabled", false));
+        etUserName.setText(userName);
+
+        btnClearChat.setOnClickListener(v -> {
+            messageList.clear();
+            chatAdapter.notifyDataSetChanged();
+            saveHistory();
+            dialog.dismiss();
+            Toast.makeText(this, "История очищена", Toast.LENGTH_SHORT).show();
+        });
+
+        btnSave.setOnClickListener(v -> {
+            boolean dark = switchTheme.isChecked();
+            prefs.edit().putBoolean("dark_theme", dark).apply();
+            prefs.edit().putBoolean("voice_enabled", switchVoice.isChecked()).apply();
+            prefs.edit().putBoolean("widget_enabled", switchWidget.isChecked()).apply();
+            isVoiceEnabled = switchVoice.isChecked();
+
+            userName = etUserName.getText().toString().trim();
+            if (userName.isEmpty()) userName = "Пользователь";
+            prefs.edit().putString("user_name", userName).apply();
+
+            if (switchWidget.isChecked()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                    startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
+                } else {
+                    startService(new Intent(this, LiraBackgroundService.class));
+                }
+            } else {
+                stopService(new Intent(this, LiraBackgroundService.class));
+            }
+
+            AppCompatDelegate.setDefaultNightMode(dark ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+            dialog.dismiss();
+        });
+
+        dialog.setContentView(view);
+        dialog.show();
     }
 
     private void checkPermissions() {
@@ -203,71 +376,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void processCommand(String text) {
-        appendChat((userName.isEmpty() ? "Вы" : userName) + ": " + text);
-        String lower = text.toLowerCase();
-        String response = "";
-
-        try {
-            if (lower.contains("фонарик")) {
-                CameraManager camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-                String cameraId = camManager.getCameraIdList()[0];
-                isTorchOn = !isTorchOn;
-                camManager.setTorchMode(cameraId, isTorchOn);
-                response = isTorchOn ? "Фонарик включен." : "Фонарик выключен.";
-            } else if (lower.contains("батарея") || lower.contains("заряд")) {
-                IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-                Intent batteryStatus = registerReceiver(null, ifilter);
-                int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
-                response = "Текущий уровень заряда батареи: " + level + "%.";
-            } else if (lower.contains("пауза") || lower.contains("музыка") || lower.contains("плей")) {
-                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
-                audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
-                response = "Сигнал воспроизведения/паузы отправлен.";
-            } else if (lower.contains("браузер")) {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("[https://google.com](https://google.com)")));
-                response = "Открываю браузер.";
-            } else if (lower.contains("камера") || lower.contains("фото")) {
-                startActivity(new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA));
-                response = "Открываю камеру.";
-            } else if (lower.contains("заметка")) {
-                String note = text.replaceFirst("(?i).*заметка", "").trim();
-                if (!note.isEmpty()) {
-                    prefs.edit().putString("quick_note", note).apply();
-                    response = "Заметка сохранена: \"" + note + "\"";
-                } else {
-                    String saved = prefs.getString("quick_note", "Заметок пока нет.");
-                    response = "Сохраненная заметка: " + saved;
-                }
-            } else if (lower.contains("очисти")) {
-                chatLog.setText("");
-                prefs.edit().remove("chat_history").apply();
-                response = "История чата очищена.";
-            } else if (lower.contains("привет")) {
-                response = "Привет, " + userName + "! Чем могу помочь?";
-            } else {
-                response = "Принято: " + text;
-            }
-        } catch (Exception e) {
-            response = "Ошибка выполнения: " + e.getMessage();
-        }
-
-        appendChat("L.I.R.A.: " + response);
-        if (isVoiceEnabled && tts != null) {
-            tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
-        }
-    }
-
-    private void appendChat(String message) {
-        chatLog.append(message + "\n\n");
-        prefs.edit().putString("chat_history", chatLog.getText().toString()).apply();
-        chatScroll.post(() -> chatScroll.fullScroll(ScrollView.FOCUS_DOWN));
-    }
-
     private void askForUserName() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Инициализация L.I.R.A.");
+        builder.setTitle("Добро пожаловать в L.I.R.A.");
         builder.setMessage("Введите ваше имя:");
         final EditText input = new EditText(this);
         builder.setView(input);
@@ -275,7 +386,7 @@ public class MainActivity extends AppCompatActivity {
             userName = input.getText().toString().trim();
             if (userName.isEmpty()) userName = "Пользователь";
             prefs.edit().putString("user_name", userName).apply();
-            appendChat("L.I.R.A.: Приятно познакомиться, " + userName + "!");
+            addMessage("L.I.R.A.: Приятно познакомиться, " + userName + "! Назовите команду или задайте вопрос.", false);
         });
         builder.setCancelable(false);
         builder.show();
