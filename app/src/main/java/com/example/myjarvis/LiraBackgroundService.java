@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -34,16 +33,12 @@ public class LiraBackgroundService extends Service {
         
         Notification notification = new Notification.Builder(this, "lira_channel")
                 .setContentTitle("L.I.R.A. активна")
-                .setContentText("Нажмите для управления ассистентом")
+                .setContentText("Плавающий виджет запущен")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
 
         startForeground(1, notification);
-        
-        // Безопасно инициализируем виджет только если есть разрешение
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-            initFloatingWidget();
-        }
+        initFloatingWidget();
     }
 
     private void initFloatingWidget() {
@@ -67,21 +62,20 @@ public class LiraBackgroundService extends Service {
 
             params.gravity = Gravity.TOP | Gravity.START;
             params.x = 100;
-            params.y = 100;
+            params.y = 200;
 
             Button fab = floatingView.findViewById(R.id.fab_widget);
             fab.setOnClickListener(v -> {
-                Toast.makeText(this, "L.I.R.A. слушаю команду...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "L.I.R.A.: Начинаем диалог!", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                intent.putExtra("start_voice", true);
                 startActivity(intent);
             });
 
             fab.setOnTouchListener(new View.OnTouchListener() {
-                private int initialX;
-                private int initialY;
-                private float initialTouchX;
-                private float initialTouchY;
+                private int initialX, initialY;
+                private float initialTouchX, initialTouchY;
 
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
@@ -113,7 +107,7 @@ public class LiraBackgroundService extends Service {
             NotificationChannel serviceChannel = new NotificationChannel(
                     "lira_channel",
                     "L.I.R.A. Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_LOW
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
