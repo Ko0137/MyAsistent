@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- Премиум Шапка -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -51,7 +50,7 @@
                 android:paddingEnd="8dp"
                 android:paddingBottom="4dp"
                 android:text="READY"
-                android:textColor="#00E676"
+                android:textColor="#FFFFFF"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -65,7 +64,6 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Список сообщений (RecyclerView) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewChat"
         android:layout_width="match_parent"
@@ -74,7 +72,6 @@
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 
-    <!-- Нижняя Панель со стильной реактивной кнопкой -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -87,12 +84,14 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:background="@android:drawable/editbox_background"
+            android:background="@drawable/bg_input"
             android:hint="Спроси или дай команду..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#999999"
             android:imeOptions="actionSend"
             android:inputType="text"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:textSize="15sp" />
 
         <FrameLayout

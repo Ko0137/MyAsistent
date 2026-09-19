@@ -29,7 +29,6 @@ import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
@@ -104,11 +103,7 @@ public class MainActivity extends AppCompatActivity {
         loadHistory();
 
         if (messageList.isEmpty()) {
-            if (userName.equals("Пользователь")) {
-                askForUserName();
-            } else {
-                addMessage("L.I.R.A.: Все системы активны. Готова к работе, " + userName + "!", false);
-            }
+            addMessage("L.I.R.A.: Все системы активны. Готова к работе, " + userName + "!", false);
         }
 
         sendButton.setOnClickListener(v -> {
@@ -147,7 +142,8 @@ public class MainActivity extends AppCompatActivity {
             speechRecognizer.startListening(intent);
             isListening = true;
             statusText.setText("LISTENING");
-            statusText.setBackgroundColor(0xFF2E7D32);
+            statusText.setBackgroundColor(0xFFD32F2F);
+            micButton.setBackgroundResource(R.drawable.bg_mic_active);
         }
     }
 
@@ -155,10 +151,9 @@ public class MainActivity extends AppCompatActivity {
         if (speechRecognizer != null) {
             speechRecognizer.stopListening();
             isListening = false;
-            micButton.setScaleX(1.0f);
-            micButton.setScaleY(1.0f);
             statusText.setText("READY");
             statusText.setBackgroundColor(0xFF1B4D3E);
+            micButton.setBackgroundResource(R.drawable.bg_mic_btn);
         }
     }
 
@@ -168,13 +163,7 @@ public class MainActivity extends AppCompatActivity {
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) { isListening = true; }
                 @Override public void onBeginningOfSpeech() {}
-                @Override public void onRmsChanged(float rmsdB) {
-                    if (isListening) {
-                        float scale = 1.0f + Math.max(0, rmsdB) / 12.0f;
-                        micButton.setScaleX(scale);
-                        micButton.setScaleY(scale);
-                    }
-                }
+                @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
                 @Override public void onEndOfSpeech() { stopListening(); }
                 @Override public void onError(int error) { stopListening(); }
@@ -374,22 +363,6 @@ public class MainActivity extends AppCompatActivity {
                 vibrator.vibrate(durationMs);
             }
         }
-    }
-
-    private void askForUserName() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Добро пожаловать в L.I.R.A.");
-        builder.setMessage("Введите ваше имя:");
-        final EditText input = new EditText(this);
-        builder.setView(input);
-        builder.setPositiveButton("Сохранить", (dialog, which) -> {
-            userName = input.getText().toString().trim();
-            if (userName.isEmpty()) userName = "Пользователь";
-            prefs.edit().putString("user_name", userName).apply();
-            addMessage("L.I.R.A.: Приятно познакомиться, " + userName + "! Назовите команду или задайте вопрос.", false);
-        });
-        builder.setCancelable(false);
-        builder.show();
     }
 
     @Override
