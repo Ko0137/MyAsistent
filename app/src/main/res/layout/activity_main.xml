@@ -1,92 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#121212">
 
-    <!-- Верхняя панель -->
-    <LinearLayout
-        android:id="@+id/topBar"
+    <TextView
+        android:id="@+id/titleText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:layout_alignParentTop="true"
+        android:text="L.I.R.A. Assistant"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:gravity="center"
+        android:paddingBottom="12dp"/>
+
+    <!-- Блок настроек фоновых опций -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1E1E1E"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp">
+
+        <Switch
+            android:id="@+id/switchWidget"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Плавающий виджет (фоновый режим)"
+            android:textColor="#FFFFFF"
+            android:paddingBottom="8dp"/>
+
+        <Switch
+            android:id="@+id/switchVoice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Голосовая активация"
+            android:textColor="#FFFFFF"/>
+    </LinearLayout>
+
+    <!-- Лог чата -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#1E1E1E"
+        android:padding="8dp"
         android:layout_marginBottom="12dp">
 
         <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="L.I.R.A. активна"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btnSettings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:backgroundTint="#00E676"
-            android:text="⚙️ Настройки"
-            android:textColor="#121212"
-            android:textSize="14sp" />
-    </LinearLayout>
-
-    <!-- Область чата -->
-    <ScrollView
-        android:id="@+id/chatScrollView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/bottomBar"
-        android:layout_below="@id/topBar"
-        android:layout_marginBottom="12dp"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:id="@+id/chatLayout"
+            android:id="@+id/chatLog"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:textColor="#00E676"
+            android:textSize="14sp"
+            android:text="" />
     </ScrollView>
 
-    <!-- Нижняя панель ввода -->
+    <!-- Поле ввода текста и кнопка отправки -->
     <LinearLayout
-        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:orientation="horizontal">
 
         <EditText
-            android:id="@+id/etInput"
+            android:id="@+id/inputMessage"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Введите или скажите..."
-            android:inputType="text"
-            android:maxLines="2" />
+            android:hint="Введите сообщение..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#888888"
+            android:backgroundTint="#00E676" />
 
         <Button
-            android:id="@+id/btnMic"
-            android:layout_width="48dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:backgroundTint="#00E676"
-            android:text="🎤"
-            android:textColor="#121212"
-            android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/btnSend"
+            android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
+            android:text="Отправить"
             android:backgroundTint="#00E676"
-            android:text="➤"
-            android:textColor="#121212"
-            android:textStyle="bold" />
+            android:textColor="#000000" />
     </LinearLayout>
 
-</RelativeLayout>
+</LinearLayout>
