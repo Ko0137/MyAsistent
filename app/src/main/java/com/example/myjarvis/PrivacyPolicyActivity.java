@@ -16,7 +16,7 @@ public class PrivacyPolicyActivity extends Activity {
 
         TextView textView = new TextView(this);
         textView.setTextColor(0xFF00FF66);
-        textView.setTextSize(14sp);
+        textView.setTextSize(14f);
         textView.setFontFamily("monospace");
         textView.setText(
             "ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ И БЕЗОПАСНОСТИ L.I.R.A.\n\n" +
