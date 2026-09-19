@@ -15,13 +15,11 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.ScrollView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +34,6 @@ public class MainActivity extends Activity {
     private Switch widgetSwitch;
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
-    private Animation pulseAnimation;
     
     private SharedPreferences prefs;
     private String userName;
@@ -58,8 +55,6 @@ public class MainActivity extends Activity {
         micButton = findViewById(R.id.micButton);
         widgetSwitch = findViewById(R.id.widgetSwitch);
         Button policyBtn = findViewById(R.id.policyBtn);
-        
-        pulseAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse);
         
         prefs = getSharedPreferences("JarvisPrefs", MODE_PRIVATE);
         userName = prefs.getString("UserName", null);
@@ -108,22 +103,18 @@ public class MainActivity extends Activity {
         speechIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
 
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { 
-                inputField.setHint("Слушаю..."); 
-                micButton.startAnimation(pulseAnimation);
-                micButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF0000));
-            }
+            @Override public void onReadyForSpeech(Bundle params) { inputField.setHint("Слушаю..."); }
             @Override public void onBeginningOfSpeech() {}
             @Override public void onRmsChanged(float rmsdB) {}
             @Override public void onBufferReceived(byte[] buffer) {}
-            @Override public void onEndOfSpeech() { stopMicAnim(); }
-            @Override public void onError(int error) { stopMicAnim(); appendMessage("Система", "Ошибка распознавания"); }
+            @Override public void onEndOfSpeech() { inputField.setHint("Текстовая команда..."); }
+            @Override public void onError(int error) { inputField.setHint("Текстовая команда..."); }
             @Override public void onPartialResults(Bundle partialResults) {}
             @Override public void onEvent(int eventType, Bundle params) {}
 
             @Override
             public void onResults(Bundle results) {
-                stopMicAnim();
+                inputField.setHint("Текстовая команда...");
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
                     String recognizedText = matches.get(0);
@@ -166,12 +157,6 @@ public class MainActivity extends Activity {
         respond("Голосовой модуль изменен.");
     }
 
-    private void stopMicAnim() {
-        micButton.clearAnimation();
-        micButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF00E5FF));
-        inputField.setHint("Текстовая команда...");
-    }
-
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -187,7 +172,7 @@ public class MainActivity extends Activity {
     private void processCommand(String command) {
         if (isWaitingForName) {
             userName = command;
-            prefs.edit().putString("UserName", userName).apply();
+        prefs.edit().putString("UserName", userName).apply();
             isWaitingForName = false;
             respond("Рад знакомству, " + userName + ". Протоколы инициализации завершены.");
             return;
@@ -195,15 +180,27 @@ public class MainActivity extends Activity {
 
         String lowerCmd = command.toLowerCase().trim();
         
+        // 1. Команда открытия приложений ("открой [название]", "запусти [название]")
+        if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ")) {
+            String appSearch = lowerCmd.replace("открой ", "").replace("запусти ", "").trim();
+            if (openAppByName(appSearch)) {
+                respond("Открываю " + appSearch);
+            } else {
+                respond("Не удалось найти приложение с именем " + appSearch);
+            }
+            return;
+        }
+
+        // 2. Сканирование приложений
         if (lowerCmd.contains("сколько приложений") || lowerCmd.contains("какие приложения")) {
             Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
             mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
             List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
-            int count = pkgList.size();
-            respond("Сканирование завершено. На устройстве найдено " + count + " приложений. Данные не сохраняются.");
+            respond("На устройстве найдено " + pkgList.size() + " приложений. Данные не сохраняются.");
             return;
         }
 
+        // 3. Звонки
         if (lowerCmd.startsWith("позвони")) {
             String number = lowerCmd.replaceAll("[^0-9+]", "");
             if (!number.isEmpty()) {
@@ -217,6 +214,7 @@ public class MainActivity extends Activity {
             return;
         }
         
+        // 4. Поиск в интернете
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
             respond("Выполняю поиск: " + query);
@@ -226,6 +224,7 @@ public class MainActivity extends Activity {
             return;
         }
 
+        // 5. Отправка текста
         if (lowerCmd.contains("напиши")) {
             String message = lowerCmd.replace("напиши ", "").trim();
             respond("Открываю приложения для отправки...");
@@ -239,8 +238,28 @@ public class MainActivity extends Activity {
         if (lowerCmd.contains("привет")) { 
             respond("Здравствуйте, " + userName + "."); 
         } else { 
-            respond("Команда не распознана. Используйте запросы: 'Найди...', 'Позвони...', 'Сколько приложений' или 'Напиши...'."); 
+            respond("Команда не распознана. Используйте: 'Открой...', 'Найди...', 'Позвони...' или 'Сколько приложений'."); 
         }
+    }
+
+    // Метод для интеллектуального поиска и запуска нужного приложения по имени
+    private boolean openAppByName(String query) {
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
+
+        for (ResolveInfo resolveInfo : pkgList) {
+            String appLabel = resolveInfo.loadLabel(getPackageManager()).toString().toLowerCase();
+            if (appLabel.contains(query)) {
+                String packageName = resolveInfo.activityInfo.packageName;
+                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+                if (launchIntent != null) {
+                    startActivity(launchIntent);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     private void respond(String text) {
