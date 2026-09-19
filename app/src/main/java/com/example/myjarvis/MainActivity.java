@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
     private Button micButton;
     private Switch widgetSwitch;
     private Switch voiceMuteSwitch;
-    private Switch genderSwitch; // Переключатель мужской/женский голос
+    private Switch genderSwitch;
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
     
@@ -181,7 +181,6 @@ public class MainActivity extends Activity {
 
     private void applyVoiceProfile() {
         if (ruVoices.isEmpty()) return;
-        // Пытаемся разделить на мужские/женские по имени тега голоса
         for (int i = 0; i < ruVoices.size(); i++) {
             String vName = ruVoices.get(i).getName().toLowerCase();
             boolean isMale = vName.contains("male") || vName.contains("mikhail") || vName.contains("pavel") || vName.contains("ru-ru-x-rum");
@@ -191,7 +190,6 @@ public class MainActivity extends Activity {
                 return;
             }
         }
-        // Фолбек, если специфичный тег не найден
         tts.setVoice(ruVoices.get(0));
     }
     
@@ -225,7 +223,6 @@ public class MainActivity extends Activity {
 
         String lowerCmd = command.toLowerCase().trim();
         
-        // Управление голосом
         if (lowerCmd.contains("отключи голос") || lowerCmd.contains("без звука")) {
             isVoiceMuted = true;
             if (voiceMuteSwitch != null) voiceMuteSwitch.setChecked(true);
@@ -241,7 +238,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Триггер-слово "Лира"
         if (lowerCmd.startsWith("лира ") || lowerCmd.equals("лира")) {
             String subCmd = lowerCmd.replace("лира", "").trim();
             if (!subCmd.isEmpty()) {
@@ -252,7 +248,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Сценарии телефона: Фонарик
         if (lowerCmd.contains("включи фонарик") || lowerCmd.contains("фонарь вкл")) {
             setFlashlight(true);
             return;
@@ -262,13 +257,11 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Сценарий телефона: Заряд батареи
         if (lowerCmd.contains("заряд") || lowerCmd.contains("батарея") || lowerCmd.contains("сколько процентов")) {
             checkBatteryLevel();
             return;
         }
 
-        // Умный запуск приложений по ключевым словам (например, "включи яндекс музыку", "открой музыку")
         if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ") || lowerCmd.startsWith("включи ")) {
             String appSearch = lowerCmd.replace("открой ", "")
                                        .replace("запусти ", "")
@@ -277,7 +270,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Поиск в интернете
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
             respond("Ищу в сети: " + query);
@@ -287,7 +279,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Звонки
         if (lowerCmd.startsWith("позвони")) {
             String number = lowerCmd.replaceAll("[^0-9+]", "");
             if (!number.isEmpty()) {
@@ -308,7 +299,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Умный поиск приложений с подсказкой вариантов при частичном совпадении
     private void smartOpenApp(String query) {
         Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -317,7 +307,6 @@ public class MainActivity extends Activity {
         List<String> matchedNames = new ArrayList<>();
         List<String> matchedPackages = new ArrayList<>();
 
-        // Ключевые маппинги для удобства (например, "музыка" -> Яндекс Музыка или Spotify)
         String searchKey = query;
         if (query.equals("музыка") || query.equals("я музыка")) {
             searchKey = "яндекс музыка";
@@ -325,7 +314,6 @@ public class MainActivity extends Activity {
 
         for (ResolveInfo resolveInfo : pkgList) {
             String appLabel = resolveInfo.loadLabel(getPackageManager()).toString().toLowerCase();
-            // Проверяем точное или частичное вхождение ключевых слов (например, "яндекс" и "музыка")
             boolean isMatch = true;
             String[] keywords = searchKey.split(" ");
             for (String kw : keywords) {
@@ -342,7 +330,6 @@ public class MainActivity extends Activity {
         }
 
         if (matchedPackages.size() == 1) {
-            // Найдено ровно одно приложение — запускаем сразу
             String appName = matchedNames.get(0);
             String pkgName = matchedPackages.get(0);
             Intent launchIntent = getPackageManager().getLaunchIntentForPackage(pkgName);
@@ -352,26 +339,18 @@ public class MainActivity extends Activity {
                 return;
             }
         } else if (matchedPackages.size() > 1) {
-            // Найдено несколько вариантов — перечисляем их пользователю
-            StringBuilder sb = new_builder_suggestions(matchedNames);
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < Math.min(matchedNames.size(), 3); i++) {
+                sb.append(matchedNames.get(i));
+                if (i < Math.min(matchedNames.size(), 3) - 1) sb.append(", ");
+            }
             respond("Найдено несколько вариантов: " + sb.toString() + ". Уточните название.");
             return;
         }
 
-        // Если точных совпадений нет, ищем просто по первому слову или показываем ошибку
         respond("Приложение по запросу '" + query + "' не найдено на устройстве.");
     }
 
-    private StringBuilder new_builder_suggestions(List<String> names) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < Math.min(names.size(), 3); i++) {
-            sb.append(names.get(i));
-            if (i < Math.min(names.size(), 3) - 1) sb.append(", ");
-        }
-        return sb;
-    }
-
-    // Сценарий: Управление фонариком
     private void setFlashlight(boolean turnOn) {
         try {
             CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
@@ -383,7 +362,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Сценарий: Проверка заряда батареи
     private void checkBatteryLevel() {
         android.content.IntentFilter ifilter = new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         Intent batteryStatus = registerReceiver(null, ifilter);
