@@ -82,11 +82,11 @@ public class MainActivity extends Activity {
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru"));
-                loadAndSelectMaleVoice();
+                loadAndSelectVoice();
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Джарвис, твой персональный ассистент. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира, твой персональный ассистент. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -139,21 +139,15 @@ public class MainActivity extends Activity {
         handleAutoListen(getIntent());
     }
     
-    private void loadAndSelectMaleVoice() {
+    private void loadAndSelectVoice() {
         try {
             for (Voice tmpVoice : tts.getVoices()) {
                 if (tmpVoice.getLocale().getLanguage().equals("ru")) {
                     ruVoices.add(tmpVoice);
-                    String vName = tmpVoice.getName().toLowerCase();
-                    // Ищем признаки мужского голоса в именах движков (ru-ru-x-auc, male и т.д.)
-                    if (vName.contains("male") || vName.contains("-m") || vName.contains("auc") || vName.contains("slt") == false) {
-                        currentVoiceIndex = ruVoices.size() - 1;
-                    }
                 }
             }
             if (!ruVoices.isEmpty()) {
-                if (currentVoiceIndex >= ruVoices.size()) currentVoiceIndex = 0;
-                tts.setVoice(ruVoices.get(currentVoiceIndex));
+                tts.setVoice(ruVoices.get(0));
             }
         } catch (Exception e) {}
     }
@@ -162,7 +156,7 @@ public class MainActivity extends Activity {
         if (ruVoices.isEmpty()) return;
         currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
         tts.setVoice(ruVoices.get(currentVoiceIndex));
-        respond("Сменил голосовой модуль.");
+        respond("Голосовой модуль изменен.");
     }
 
     private void stopMicAnim() {
@@ -234,7 +228,7 @@ public class MainActivity extends Activity {
     }
     
     private void respond(String text) {
-        appendMessage("J.A.R.V.I.S.", text);
+        appendMessage("L.I.R.A.", text);
         if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
 
