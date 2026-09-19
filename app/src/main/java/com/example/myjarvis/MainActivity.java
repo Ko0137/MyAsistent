@@ -70,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Поддержка работы поверх экрана блокировки
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
@@ -239,17 +238,12 @@ public class MainActivity extends AppCompatActivity {
         String response = "";
 
         try {
-            // 1. Проверка пользовательских кастомных команд
             String customResponse = getCustomCommandResponse(lower);
             if (customResponse != null) {
                 response = customResponse;
-            } 
-            // 2. Будильник ("поставь будильник на 7:30" / "разбуди в 8 утра")
-            else if (lower.contains("будильник") || lower.contains("разбуди")) {
+            } else if (lower.contains("будильник") || lower.contains("разбуди")) {
                 response = parseAndSetAlarm(lower);
-            }
-            // 3. Открытие приложений с живыми синонимами
-            else if (lower.startsWith("открой ") || lower.startsWith("запусти ") || lower.startsWith("включи приложение ")) {
+            } else if (lower.startsWith("открой ") || lower.startsWith("запусти ") || lower.startsWith("включи приложение ")) {
                 String appQuery = lower.replaceFirst("^(открой|запусти|включи приложение)\\s+", "").trim();
                 String launched = openAppByName(appQuery);
                 if (launched != null) {
@@ -263,31 +257,23 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     response = "Приложение \"" + appQuery + "\" не найдено.";
                 }
-            } 
-            // 4. Фонарик (расширенные живые фразы)
-            else if (containsAny(lower, "фонарик", "свет", "подсвети", "вспышка", "темно", "вруби свет")) {
+            } else if (containsAny(lower, "фонарик", "свет", "подсвети", "вспышка", "темно", "вруби свет")) {
                 CameraManager camManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
                 String cameraId = camManager.getCameraIdList()[0];
                 isTorchOn = !isTorchOn;
                 camManager.setTorchMode(cameraId, isTorchOn);
                 response = isTorchOn ? "Фонарик активирован." : "Фонарик выключен.";
-            } 
-            // 5. Батарея
-            else if (containsAny(lower, "батарея", "заряд", "аккумулятор", "сколько осталось", "энергия")) {
+            } else if (containsAny(lower, "батарея", "заряд", "аккумулятор", "сколько осталось", "энергия")) {
                 IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
                 Intent batteryStatus = registerReceiver(null, ifilter);
                 int level = batteryStatus != null ? batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) : -1;
                 response = "Уровень заряда батареи: " + level + "%.";
-            } 
-            // 6. Плеер / Музыка
-            else if (containsAny(lower, "пауза", "музыка", "плей", "трек", "стоп музыка")) {
+            } else if (containsAny(lower, "пауза", "музыка", "плей", "трек", "стоп музыка")) {
                 AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
                 audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
                 response = "Медиаплеер переключен.";
-            } 
-            // 7. Заметки
-            else if (lower.contains("прочитай заметки") || lower.contains("мои заметки")) {
+            } else if (lower.contains("прочитай заметки") || lower.contains("мои заметки")) {
                 String notes = prefs.getString("notes_list", "Заметок пока нет.");
                 response = "Ваши заметки:\n" + notes;
             } else if (lower.contains("очисти заметки")) {
@@ -303,9 +289,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     response = "Что именно записать?";
                 }
-            } 
-            // 8. Приветствия
-            else if (containsAny(lower, "привет", "здравствуй", "хей", "как дела", "добрый день")) {
+            } else if (containsAny(lower, "привет", "здравствуй", "хей", "как дела", "добрый день")) {
                 response = "Приветствую, " + userName + "! Чем зайдемся?";
             } else {
                 response = "Команда принята: " + text;
@@ -329,18 +313,15 @@ public class MainActivity extends AppCompatActivity {
 
     private String parseAndSetAlarm(String lower) {
         try {
-            // Простейший поиск часов и минут в тексте (например, "на 7:30" или "на 8")
             String[] words = lower.split("\\s+");
             int hour = 7;
             int minute = 0;
-            boolean foundTime = false;
 
             for (String w : words) {
                 if (w.contains(":")) {
                     String[] parts = w.split(":");
                     hour = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
                     minute = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
-                    foundTime = true;
                     break;
                 }
             }
@@ -355,7 +336,6 @@ public class MainActivity extends AppCompatActivity {
 
             return "Устанавливаю будильник на " + hour + ":" + (minute < 10 ? "0" + minute : minute);
         } catch (Exception e) {
-            // Если не удалось распарсить точное время, просто открываем приложение будильника
             Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
@@ -457,7 +437,6 @@ public class MainActivity extends AppCompatActivity {
         Button btnClearChat = view.findViewById(R.id.btnClearChat);
         Button btnSave = view.findViewById(R.id.btnSaveSettings);
         
-        // Поле для добавления кастомной команды прямо в настройках
         EditText etCustomKey = view.findViewById(R.id.etCustomKey);
         EditText etCustomVal = view.findViewById(R.id.etCustomVal);
         Button btnAddCustom = view.findViewById(R.id.btnAddCustom);
@@ -494,7 +473,7 @@ public class MainActivity extends AppCompatActivity {
             if (isChecked) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
                     Toast.makeText(this, "Включите разрешение 'Отображение поверх других окон'", Toast.LENGTH_LONG).show();
-                    Intent intent = new Intent(Intent.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
                     startActivity(intent);
                 }
             }
