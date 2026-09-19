@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:padding="10dp"
         android:gravity="center_vertical"
         android:background="#0B0B14">
         
@@ -17,19 +17,28 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="L.I.R.A. v2.0"
+            android:text="LIRA Assistant"
             android:textColor="#00FFFF"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold"/>
+
+        <Switch
+            android:id="@+id/genderSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Муж."
+            android:textColor="#A0A0C0"
+            android:textSize="10sp"
+            android:layout_marginEnd="4dp"/>
 
         <Switch
             android:id="@+id/voiceMuteSwitch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Без звука"
+            android:text="Тихо"
             android:textColor="#A0A0C0"
-            android:textSize="11sp"
-            android:layout_marginEnd="6dp"/>
+            android:textSize="10sp"
+            android:layout_marginEnd="4dp"/>
 
         <Switch
             android:id="@+id/widgetSwitch"
@@ -37,10 +46,9 @@
             android:layout_height="wrap_content"
             android:text="Виджет"
             android:textColor="#A0A0C0"
-            android:textSize="11sp"/>
+            android:textSize="10sp"/>
     </LinearLayout>
 
-    <!-- Вторая строка панели управления для дополнительных кнопок -->
     <LinearLayout
         android:id="@+id/subTopBar"
         android:layout_width="match_parent"
@@ -49,15 +57,15 @@
         android:orientation="horizontal"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:paddingBottom="8dp"
+        android:paddingBottom="6dp"
         android:background="#0B0B14"
         android:gravity="end">
 
         <Button
             android:id="@+id/voiceBtn"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:text="Голос"
+            android:layout_height="30dp"
+            android:text="Сменить голос"
             android:textSize="10sp"
             android:layout_marginStart="4dp"
             android:background="#151525"
@@ -66,7 +74,7 @@
         <Button
             android:id="@+id/policyBtn"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="30dp"
             android:text="Безопасность"
             android:textSize="10sp"
             android:layout_marginStart="4dp"
@@ -89,7 +97,7 @@
             android:textColor="#00FF66"
             android:textSize="14sp"
             android:fontFamily="monospace"
-            android:text="[System] Secure core online.\n[System] Say 'Лира [команда]' or use the floating widget."/>
+            android:text="[System] LIRA core initialized.\n[System] Try: 'Лира, включи Яндекс Музыку', 'Лира, включи фонарик'."/>
     </ScrollView>
 
     <LinearLayout
@@ -118,7 +126,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
-            android:hint="Команда..."
+            android:hint="Команда для Лиры..."
             android:textColorHint="#505070"
             android:textColor="#FFFFFF"
             android:textSize="14sp"

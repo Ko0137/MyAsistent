@@ -3,11 +3,14 @@ package com.example.myjarvis;
 import android.Manifest;
 import android.app.Activity;
 import android.app.SearchManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.hardware.camera2.CameraManager;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
@@ -33,6 +36,7 @@ public class MainActivity extends Activity {
     private Button micButton;
     private Switch widgetSwitch;
     private Switch voiceMuteSwitch;
+    private Switch genderSwitch; // Переключатель мужской/женский голос
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
     
@@ -40,6 +44,7 @@ public class MainActivity extends Activity {
     private String userName;
     private boolean isWaitingForName = false;
     private boolean isVoiceMuted = false;
+    private boolean isMaleVoice = false;
     
     private List<Voice> ruVoices = new ArrayList<>();
     private int currentVoiceIndex = 0;
@@ -57,17 +62,30 @@ public class MainActivity extends Activity {
         micButton = findViewById(R.id.micButton);
         widgetSwitch = findViewById(R.id.widgetSwitch);
         voiceMuteSwitch = findViewById(R.id.voiceMuteSwitch);
+        genderSwitch = findViewById(R.id.genderSwitch);
         Button policyBtn = findViewById(R.id.policyBtn);
         
         prefs = getSharedPreferences("JarvisPrefs", MODE_PRIVATE);
         userName = prefs.getString("UserName", null);
         isVoiceMuted = prefs.getBoolean("VoiceMuted", false);
+        isMaleVoice = prefs.getBoolean("IsMaleVoice", false);
+
         if (voiceMuteSwitch != null) {
             voiceMuteSwitch.setChecked(isVoiceMuted);
             voiceMuteSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
                 isVoiceMuted = isChecked;
                 prefs.edit().putBoolean("VoiceMuted", isVoiceMuted).apply();
                 respond(isVoiceMuted ? "Голосовой ответ отключен." : "Голосовой ответ активирован.");
+            });
+        }
+
+        if (genderSwitch != null) {
+            genderSwitch.setChecked(isMaleVoice);
+            genderSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+                isMaleVoice = isChecked;
+                prefs.edit().putBoolean("IsMaleVoice", isMaleVoice).apply();
+                applyVoiceProfile();
+                respond(isMaleVoice ? "Установлен мужской голос." : "Установлен женский голос.");
             });
         }
 
@@ -96,18 +114,18 @@ public class MainActivity extends Activity {
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru"));
-                loadAndSelectVoice();
+                loadVoices();
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Лира. Безопасный ассистент. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира, ваш защищенный ассистент. Как я могу к вам обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
             }
         });
         
-        voiceBtn.setOnClickListener(v -> changeVoice());
+        voiceBtn.setOnClickListener(v -> changeVoiceCycle());
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         Intent speechIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -149,24 +167,39 @@ public class MainActivity extends Activity {
         handleAutoListen(getIntent());
     }
     
-    private void loadAndSelectVoice() {
+    private void loadVoices() {
         try {
+            ruVoices.clear();
             for (Voice tmpVoice : tts.getVoices()) {
                 if (tmpVoice.getLocale().getLanguage().equals("ru")) {
                     ruVoices.add(tmpVoice);
                 }
             }
-            if (!ruVoices.isEmpty()) {
-                tts.setVoice(ruVoices.get(0));
-            }
+            applyVoiceProfile();
         } catch (Exception e) {}
     }
+
+    private void applyVoiceProfile() {
+        if (ruVoices.isEmpty()) return;
+        // Пытаемся разделить на мужские/женские по имени тега голоса
+        for (int i = 0; i < ruVoices.size(); i++) {
+            String vName = ruVoices.get(i).getName().toLowerCase();
+            boolean isMale = vName.contains("male") || vName.contains("mikhail") || vName.contains("pavel") || vName.contains("ru-ru-x-rum");
+            if (isMale == isMaleVoice) {
+                currentVoiceIndex = i;
+                tts.setVoice(ruVoices.get(currentVoiceIndex));
+                return;
+            }
+        }
+        // Фолбек, если специфичный тег не найден
+        tts.setVoice(ruVoices.get(0));
+    }
     
-    private void changeVoice() {
+    private void changeVoiceCycle() {
         if (ruVoices.isEmpty()) return;
         currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
         tts.setVoice(ruVoices.get(currentVoiceIndex));
-        respond("Голосовой профиль изменен.");
+        respond("Голосовой профиль переключен.");
     }
 
     @Override
@@ -186,13 +219,13 @@ public class MainActivity extends Activity {
             userName = command;
             prefs.edit().putString("UserName", userName).apply();
             isWaitingForName = false;
-            respond("Запомнила, " + userName + ". Конфиденциальность активна.");
+            respond("Приятно познакомиться, " + userName + ". Конфиденциальность активна.");
             return;
         }
 
         String lowerCmd = command.toLowerCase().trim();
         
-        // Управление голосом через текст/речь
+        // Управление голосом
         if (lowerCmd.contains("отключи голос") || lowerCmd.contains("без звука")) {
             isVoiceMuted = true;
             if (voiceMuteSwitch != null) voiceMuteSwitch.setChecked(true);
@@ -208,32 +241,46 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Активация по фразе вроде "лира" или "эй лира"
+        // Триггер-слово "Лира"
         if (lowerCmd.startsWith("лира ") || lowerCmd.equals("лира")) {
             String subCmd = lowerCmd.replace("лира", "").trim();
             if (!subCmd.isEmpty()) {
                 processCommand(subCmd);
             } else {
-                respond("Слушаю вас, " + (userName != null ? userName : "пользователь") + ".");
+                respond("Я здесь, " + (userName != null ? userName : "пользователь") + ".");
             }
             return;
         }
 
-        // Открытие приложений
-        if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ")) {
-            String appSearch = lowerCmd.replace("открой ", "").replace("запусти ", "").trim();
-            if (openAppByName(appSearch)) {
-                respond("Открываю " + appSearch);
-            } else {
-                respond("Приложение не найдено: " + appSearch);
-            }
+        // Сценарии телефона: Фонарик
+        if (lowerCmd.contains("включи фонарик") || lowerCmd.contains("фонарь вкл")) {
+            setFlashlight(true);
+            return;
+        }
+        if (lowerCmd.contains("выключи фонарик") || lowerCmd.contains("фонарь выкл")) {
+            setFlashlight(false);
             return;
         }
 
-        // Поиск
+        // Сценарий телефона: Заряд батареи
+        if (lowerCmd.contains("заряд") || lowerCmd.contains("батарея") || lowerCmd.contains("сколько процентов")) {
+            checkBatteryLevel();
+            return;
+        }
+
+        // Умный запуск приложений по ключевым словам (например, "включи яндекс музыку", "открой музыку")
+        if (lowerCmd.startsWith("открой ") || lowerCmd.startsWith("запусти ") || lowerCmd.startsWith("включи ")) {
+            String appSearch = lowerCmd.replace("открой ", "")
+                                       .replace("запусти ", "")
+                                       .replace("включи ", "").trim();
+            smartOpenApp(appSearch);
+            return;
+        }
+
+        // Поиск в интернете
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
-            respond("Выполняю поиск: " + query);
+            respond("Ищу в сети: " + query);
             Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
             intent.putExtra(SearchManager.QUERY, query);
             startActivity(intent);
@@ -249,7 +296,7 @@ public class MainActivity extends Activity {
                 intent.setData(Uri.parse("tel:" + number));
                 startActivity(intent);
             } else {
-                respond("Укажите номер телефона.");
+                respond("Укажите номер телефона для вызова.");
             }
             return;
         }
@@ -257,27 +304,97 @@ public class MainActivity extends Activity {
         if (lowerCmd.contains("привет")) { 
             respond("Здравствуйте, " + (userName != null ? userName : "") + "."); 
         } else { 
-            respond("Команда не распознана. Скажите 'Лира, открой [приложение]' или 'Лира, найди [запрос]'."); 
+            respond("Команда не распознана. Попробуйте: 'Лира, включи Яндекс Музыку', 'Лира, включи фонарик' или 'Лира, заряд батареи'."); 
         }
     }
 
-    private boolean openAppByName(String query) {
+    // Умный поиск приложений с подсказкой вариантов при частичном совпадении
+    private void smartOpenApp(String query) {
         Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
 
+        List<String> matchedNames = new ArrayList<>();
+        List<String> matchedPackages = new ArrayList<>();
+
+        // Ключевые маппинги для удобства (например, "музыка" -> Яндекс Музыка или Spotify)
+        String searchKey = query;
+        if (query.equals("музыка") || query.equals("я музыка")) {
+            searchKey = "яндекс музыка";
+        }
+
         for (ResolveInfo resolveInfo : pkgList) {
             String appLabel = resolveInfo.loadLabel(getPackageManager()).toString().toLowerCase();
-            if (appLabel.contains(query)) {
-                String packageName = resolveInfo.activityInfo.packageName;
-                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(packageName);
-                if (launchIntent != null) {
-                    startActivity(launchIntent);
-                    return true;
+            // Проверяем точное или частичное вхождение ключевых слов (например, "яндекс" и "музыка")
+            boolean isMatch = true;
+            String[] keywords = searchKey.split(" ");
+            for (String kw : keywords) {
+                if (!appLabel.contains(kw)) {
+                    isMatch = false;
+                    break;
                 }
             }
+
+            if (isMatch || appLabel.contains(searchKey)) {
+                matchedNames.add(resolveInfo.loadLabel(getPackageManager()).toString());
+                matchedPackages.add(resolveInfo.activityInfo.packageName);
+            }
         }
-        return false;
+
+        if (matchedPackages.size() == 1) {
+            // Найдено ровно одно приложение — запускаем сразу
+            String appName = matchedNames.get(0);
+            String pkgName = matchedPackages.get(0);
+            Intent launchIntent = getPackageManager().getLaunchIntentForPackage(pkgName);
+            if (launchIntent != null) {
+                respond("Запускаю " + appName);
+                startActivity(launchIntent);
+                return;
+            }
+        } else if (matchedPackages.size() > 1) {
+            // Найдено несколько вариантов — перечисляем их пользователю
+            StringBuilder sb = new_builder_suggestions(matchedNames);
+            respond("Найдено несколько вариантов: " + sb.toString() + ". Уточните название.");
+            return;
+        }
+
+        // Если точных совпадений нет, ищем просто по первому слову или показываем ошибку
+        respond("Приложение по запросу '" + query + "' не найдено на устройстве.");
+    }
+
+    private StringBuilder new_builder_suggestions(List<String> names) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < Math.min(names.size(), 3); i++) {
+            sb.append(names.get(i));
+            if (i < Math.min(names.size(), 3) - 1) sb.append(", ");
+        }
+        return sb;
+    }
+
+    // Сценарий: Управление фонариком
+    private void setFlashlight(boolean turnOn) {
+        try {
+            CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            String cameraId = cameraManager.getCameraIdList()[0];
+            cameraManager.setTorchMode(cameraId, turnOn);
+            respond(turnOn ? "Фонарик включен." : "Фонарик выключен.");
+        } catch (Exception e) {
+            respond("Не удалось управлять фонариком на этом устройстве.");
+        }
+    }
+
+    // Сценарий: Проверка заряда батареи
+    private void checkBatteryLevel() {
+        android.content.IntentFilter ifilter = new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = registerReceiver(null, ifilter);
+        if (batteryStatus != null) {
+            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            float batteryPct = level * 100 / (float)scale;
+            respond("Заряд батареи составляет " + (int)batteryPct + " процентов.");
+        } else {
+            respond("Не удалось получить данные о батарее.");
+        }
     }
     
     private void respond(String text) {
