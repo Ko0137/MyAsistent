@@ -10,8 +10,8 @@ android {
         applicationId "com.example.myjarvis"
         minSdk 24
         targetSdk 34
-        versionCode 6
-        versionName "1.5"
+        versionCode 7
+        versionName "1.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,6 +29,5 @@ android {
 }
 
 dependencies {
-    // Используем только встроенную базовую библиотеку, никакой внешней сети для сборки!
-    implementation 'android.os:core:1.0.0'
+    // Никаких внешних библиотек — только чистый Android SDK, сборка пройдет мгновенно!
 }
