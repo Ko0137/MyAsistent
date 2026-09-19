@@ -82,11 +82,11 @@ public class MainActivity extends Activity {
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru"));
-                loadVoices();
+                loadAndSelectMaleVoice();
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет! Я твой новый голосовой ассистент. Как мне тебя называть?");
+                    respond("Привет. Я Джарвис, твой персональный ассистент. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -139,12 +139,21 @@ public class MainActivity extends Activity {
         handleAutoListen(getIntent());
     }
     
-    private void loadVoices() {
+    private void loadAndSelectMaleVoice() {
         try {
             for (Voice tmpVoice : tts.getVoices()) {
                 if (tmpVoice.getLocale().getLanguage().equals("ru")) {
                     ruVoices.add(tmpVoice);
+                    String vName = tmpVoice.getName().toLowerCase();
+                    // Ищем признаки мужского голоса в именах движков (ru-ru-x-auc, male и т.д.)
+                    if (vName.contains("male") || vName.contains("-m") || vName.contains("auc") || vName.contains("slt") == false) {
+                        currentVoiceIndex = ruVoices.size() - 1;
+                    }
                 }
+            }
+            if (!ruVoices.isEmpty()) {
+                if (currentVoiceIndex >= ruVoices.size()) currentVoiceIndex = 0;
+                tts.setVoice(ruVoices.get(currentVoiceIndex));
             }
         } catch (Exception e) {}
     }
@@ -153,7 +162,7 @@ public class MainActivity extends Activity {
         if (ruVoices.isEmpty()) return;
         currentVoiceIndex = (currentVoiceIndex + 1) % ruVoices.size();
         tts.setVoice(ruVoices.get(currentVoiceIndex));
-        respond("Голос изменен. Как вам такое звучание?");
+        respond("Сменил голосовой модуль.");
     }
 
     private void stopMicAnim() {
@@ -179,51 +188,48 @@ public class MainActivity extends Activity {
             userName = command;
             prefs.edit().putString("UserName", userName).apply();
             isWaitingForName = false;
-            respond("Приятно познакомиться, " + userName + ". Теперь я готов выполнять ваши команды.");
+            respond("Рад знакомству, " + userName + ". Протоколы инициализации завершены.");
             return;
         }
 
         String lowerCmd = command.toLowerCase().trim();
         
-        // Звонки
         if (lowerCmd.startsWith("позвони")) {
             String number = lowerCmd.replaceAll("[^0-9+]", "");
             if (!number.isEmpty()) {
-                respond("Открываю набор номера " + number);
+                respond("Набираю номер " + number);
                 Intent intent = new Intent(Intent.ACTION_DIAL);
                 intent.setData(Uri.parse("tel:" + number));
                 startActivity(intent);
             } else {
-                respond("Продиктуйте номер телефона после слова позвони.");
+                respond("Укажите номер телефона для вызова.");
             }
             return;
         }
         
-        // Поиск
         if (lowerCmd.startsWith("найди ")) {
             String query = lowerCmd.replace("найди ", "").trim();
-            respond("Ищу: " + query);
+            respond("Выполняю поиск: " + query);
             Intent intent = new Intent(Intent.ACTION_WEB_SEARCH);
             intent.putExtra(SearchManager.QUERY, query);
             startActivity(intent);
             return;
         }
 
-        // Сообщения в мессенджеры
         if (lowerCmd.contains("напиши")) {
             String message = lowerCmd.replace("напиши ", "").trim();
-            respond("Подготавливаю сообщение...");
+            respond("Открываю приложения для отправки...");
             Intent intent = new Intent(Intent.ACTION_SEND);
             intent.setType("text/plain");
             intent.putExtra(Intent.EXTRA_TEXT, message);
-            startActivity(Intent.createChooser(intent, "Выберите приложение для отправки"));
+            startActivity(Intent.createChooser(intent, "Отправить через"));
             return;
         }
         
         if (lowerCmd.contains("привет")) { 
-            respond("Приветствую, " + userName + "."); 
+            respond("Здравствуйте, " + userName + "."); 
         } else { 
-            respond("Команда не распознана. Попробуйте 'Найди...', 'Позвони...' или 'Напиши...'."); 
+            respond("Команда не распознана. Используйте запросы: 'Найди...', 'Позвони...' или 'Напиши...'."); 
         }
     }
     
