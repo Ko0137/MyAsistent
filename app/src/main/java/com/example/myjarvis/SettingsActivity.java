@@ -1,10 +1,11 @@
 package com.example.myjarvis;
 
-import android.content.Intent;
+import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.graphics.Paint;
-import android.net.Uri;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -32,11 +33,8 @@ public class SettingsActivity extends AppCompatActivity {
         voiceSwitch.setChecked(prefs.getBoolean("voice_female", true));
         quietSwitch.setChecked(prefs.getBoolean("quiet_mode", false));
 
-        // Кликабельная политика конфиденциальности
-        privacyPolicyLink.setOnClickListener(v -> {
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Ko0137/MyAsistent"));
-            startActivity(browserIntent);
-        });
+        // Показываем красивое всплывающее окно с политикой конфиденциальности
+        privacyPolicyLink.setOnClickListener(v -> showPrivacyPolicyDialog());
 
         backButton.setOnClickListener(v -> {
             // Сохраняем состояние переключателей
@@ -49,5 +47,24 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "Настройки сохранены!", Toast.LENGTH_SHORT).show();
             finish();
         });
+    }
+
+    private void showPrivacyPolicyDialog() {
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_privacy_policy);
+        
+        // Делаем фон диалога прозрачным, чтобы были видны закругления нашего макета
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        TextView tvClose = dialog.findViewById(R.id.tvClose);
+        Button btnOk = dialog.findViewById(R.id.btnOk);
+
+        tvClose.setOnClickListener(v -> dialog.dismiss());
+        btnOk.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 }
