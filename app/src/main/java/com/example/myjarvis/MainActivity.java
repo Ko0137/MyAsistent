@@ -1,8 +1,12 @@
 package com.example.myjarvis;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.camera2.CameraManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.widget.Button;
@@ -20,6 +24,9 @@ public class MainActivity extends AppCompatActivity {
     private EditText inputField;
     private ScrollView scrollView;
     private TextToSpeech tts;
+    private CameraManager cameraManager;
+    private String cameraId;
+    private boolean isFlashOn = false;
     private static final int REQUEST_CODE_STT = 101;
 
     @Override
@@ -39,6 +46,16 @@ public class MainActivity extends AppCompatActivity {
         Button micButton = findViewById(R.id.micButton);
         ImageButton settingsButton = findViewById(R.id.settingsButton);
 
+        // Инициализация камеры для фонарика
+        cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            if (cameraManager != null && cameraManager.getCameraIdList().length > 0) {
+                cameraId = cameraManager.getCameraIdList()[0];
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(new Locale("ru", "RU"));
@@ -50,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
             if (!text.isEmpty()) {
                 appendLog("[USER] " + text);
                 inputField.setText("");
-                processCommand(text);
+                processSmartCommand(text);
             }
         });
 
@@ -61,17 +78,18 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        appendLog("[L.I.R.A.] Привет! Я Лира. Готова к работе.");
+        appendLog("[L.I.R.A.] Система активирована. Все модули загружены.");
     }
 
     private void startVoiceRecognition() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажите команду для Лиры...");
         try {
             startActivityForResult(intent, REQUEST_CODE_STT);
         } catch (Exception e) {
-            appendLog("[System] Голосовой ввод недоступен.");
+            appendLog("[System] Ошибка запуска голосового ввода.");
         }
     }
 
@@ -83,30 +101,71 @@ public class MainActivity extends AppCompatActivity {
             if (result != null && !result.isEmpty()) {
                 String spokenText = result.get(0);
                 appendLog("[USER] " + spokenText);
-                processCommand(spokenText);
+                processSmartCommand(spokenText);
             }
         }
     }
 
-    private void processCommand(String command) {
+    private void processSmartCommand(String command) {
         String lower = command.toLowerCase();
         SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         boolean quietMode = prefs.getBoolean("isQuietMode", false);
         String response;
 
-        if (lower.contains("фонарик")) {
-            response = "Фонарик переключается.";
-        } else if (lower.contains("музык") || lower.contains("яндекс")) {
-            response = "Включаю музыку.";
-        } else if (lower.contains("камер")) {
+        if (lower.contains("фонарик") || lower.contains("свет")) {
+            toggleFlashlight();
+            response = isFlashOn ? "Фонарик включен." : "Фонарик выключен.";
+        } else if (lower.contains("музык") || lower.contains("песн") || lower.contains("плей")) {
+            playMusic();
+            response = "Запускаю музыкальный плеер.";
+        } else if (lower.contains("камер") || lower.contains("фото")) {
+            openCamera();
             response = "Открываю камеру.";
+        } else if (lower.contains("привет") || lower.contains("как дела")) {
+            response = "Привет, Костя! Всё системы работают стабильно.";
         } else {
-            response = "Команда принята: " + command;
+            response = "Команда обработана: " + command;
         }
 
         appendLog("[L.I.R.A.] " + response);
         if (!quietMode && tts != null) {
             tts.speak(response, TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+    }
+
+    private void toggleFlashlight() {
+        try {
+            if (cameraManager != null && cameraId != null) {
+                isFlashOn = !isFlashOn;
+                cameraManager.setTorchMode(cameraId, isFlashOn);
+            }
+        } catch (Exception e) {
+            appendLog("[System] Ошибка управления фонариком.");
+        }
+    }
+
+    private void playMusic() {
+        try {
+            Intent intent = new Intent(MediaStore.INTENT_ACTION_MUSIC_PLAYER);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.parse("content://media/internal/audio/media"), "audio/*");
+                startActivity(intent);
+            } catch (Exception ex) {
+                appendLog("[System] Не удалось найти приложение музыки.");
+            }
+        }
+    }
+
+    private void openCamera() {
+        try {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            startActivity(intent);
+        } catch (Exception e) {
+            appendLog("[System] Не удалось открыть камеру.");
         }
     }
 
