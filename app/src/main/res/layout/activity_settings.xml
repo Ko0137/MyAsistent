@@ -15,7 +15,7 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
-    <!-- Настройка 1: Темная тема (Строка: Текст слева -> Тумблер справа) -->
+    <!-- Настройка 1: Темная тема -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -133,8 +133,7 @@
         android:focusable="true"
         android:text="📄 Политика конфиденциальности"
         android:textColor="#00E676"
-        android:textSize="14sp"
-        android:textStyle="underline" />
+        android:textSize="14sp" />
 
     <Button
         android:id="@+id/backButton"
