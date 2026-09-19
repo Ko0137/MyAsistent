@@ -1,58 +1,105 @@
 package com.example.myjarvis;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
-import androidx.core.app.NotificationCompat;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.ImageButton;
+import android.widget.Toast;
 
 public class LiraBackgroundService extends Service {
 
-    private static final String CHANNEL_ID = "LiraServiceChannel";
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        createNotificationChannel();
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("L.I.R.A. активна")
-                .setContentText("Нажми, чтобы открыть ассистента")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setContentIntent(pendingIntent)
-                .build();
-
-        startForeground(1, notification);
-
-        return START_STICKY;
-    }
+    private WindowManager windowManager;
+    private View floatingView;
+    private WindowManager.LayoutParams params;
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "L.I.R.A. Фоновый сервис",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(serviceChannel);
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        
+        try {
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            
+            // Надуваем макет плавающей кнопки (используем существующий или создаем программно)
+            floatingView = LayoutInflater.from(this).inflate(R.layout.widget_floating, null);
+
+            int layoutParamType;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                layoutParamType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            } else {
+                layoutParamType = WindowManager.LayoutParams.TYPE_PHONE;
             }
+
+            params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    layoutParamType,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    PixelFormat.TRANSLUCENT
+            );
+
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.x = 100;
+            params.y = 300;
+
+            windowManager.addView(floatingView, params);
+
+            // Клик по плавающей иконке открывает приложение
+            ImageButton fab = floatingView.findViewById(R.id.fabWidget);
+            if (fab != null) {
+                fab.setOnClickListener(v -> {
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                });
+
+                // Реализация перетаскивания пальцем
+                fab.setOnTouchListener(new View.OnTouchListener() {
+                    private int initialX;
+                    private int initialY;
+                    private float initialTouchX;
+                    private float initialTouchY;
+
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        switch (event.getAction()) {
+                            case MotionEvent.ACTION_DOWN:
+                                initialX = params.x;
+                                initialY = params.y;
+                                initialTouchX = event.getRawX();
+                                initialTouchY = event.getRawY();
+                                return true;
+                            case MotionEvent.ACTION_MOVE:
+                                params.x = initialX + (int) (event.getRawX() - initialTouchX);
+                                params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                                windowManager.updateViewLayout(floatingView, params);
+                                return true;
+                        }
+                        return false;
+                    }
+                });
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Ошибка виджета: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (floatingView != null && windowManager != null) {
+            windowManager.removeView(floatingView);
         }
     }
 }
