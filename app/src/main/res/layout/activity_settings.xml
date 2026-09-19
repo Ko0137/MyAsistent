@@ -3,17 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="20dp"
-    android:background="?android:attr/colorBackground">
+    android:padding="24dp"
+    android:background="#121212">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Настройки"
-        android:textSize="24sp"
+        android:textSize="26sp"
         android:textStyle="bold"
-        android:layout_marginBottom="24dp"
-        android:textColor="?android:attr/textColorPrimary"/>
+        android:layout_marginBottom="32dp"
+        android:textColor="#FFFFFF"/>
 
     <Switch
         android:id="@+id/themeSwitch"
@@ -21,6 +21,7 @@
         android:layout_height="wrap_content"
         android:text="Темная тема"
         android:textSize="16sp"
+        android:textColor="#E0E0E0"
         android:paddingVertical="12dp"/>
 
     <Switch
@@ -29,6 +30,7 @@
         android:layout_height="wrap_content"
         android:text="Женский голос (LIRA)"
         android:textSize="16sp"
+        android:textColor="#E0E0E0"
         android:paddingVertical="12dp"/>
 
     <Switch
@@ -37,6 +39,7 @@
         android:layout_height="wrap_content"
         android:text="Тихий режим"
         android:textSize="16sp"
+        android:textColor="#E0E0E0"
         android:paddingVertical="12dp"/>
 
 </LinearLayout>
