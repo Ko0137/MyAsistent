@@ -1,100 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#121212">
+<LinearLayout android:layout_height="match_parent" android:layout_width="match_parent" android:orientation="vertical" android:padding="16dp" xmlns:android="[http://schemas.android.com/apk/res/android](http://schemas.android.com/apk/res/android)">
 
-    <TextView
-        android:id="@+id/titleText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="L.I.R.A. Assistant"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:gravity="center"
-        android:paddingBottom="12dp"/>
+    <TextView android:gravity="center" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="12dp" android:text="L.I.R.A. Assistant" android:textColor="?android:attr/textColorPrimary" android:textSize="24sp" android:textStyle="bold"/>
 
-    <!-- Блок настроек (виджет и голос) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#1E1E1E"
-        android:padding="12dp"
-        android:layout_marginBottom="12dp">
+    <!-- Панель настроек -->
+    <LinearLayout android:background="?android:attr/colorBackgroundFloating" android:elevation="4dp" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:layout_width="match_parent" android:orientation="vertical" android:padding="12dp">
 
-        <Switch
-            android:id="@+id/switchWidget"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Плавающий виджет (фоновый режим)"
-            android:textColor="#FFFFFF"
-            android:paddingBottom="8dp"/>
+        <Switch android:id="@+id/switchTheme" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="8dp" android:text="Тёмная тема"/>
 
-        <Switch
-            android:id="@+id/switchVoice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Голосовая активация"
-            android:textColor="#FFFFFF"/>
+        <Switch android:id="@+id/switchWidget" android:layout_height="wrap_content" android:layout_width="match_parent" android:paddingBottom="8dp" android:text="Плавающий виджет (поверх окон)"/>
+
+        <Switch android:id="@+id/switchVoice" android:layout_height="wrap_content" android:layout_width="match_parent" android:text="Озвучивать ответы (TTS)"/>
     </LinearLayout>
 
-    <!-- Лог чата -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#1E1E1E"
-        android:padding="8dp"
-        android:layout_marginBottom="12dp">
+    <!-- Чат -->
+    <ScrollView android:background="?android:attr/colorBackgroundFloating" android:elevation="2dp" android:id="@+id/chatScroll" android:layout_height="0dp" android:layout_marginBottom="12dp" android:layout_weight="1" android:layout_width="match_parent" android:padding="12dp">
 
-        <TextView
-            android:id="@+id/chatLog"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#00E676"
-            android:textSize="14sp"
-            android:text="" />
+        <TextView android:id="@+id/chatLog" android:layout_height="wrap_content" android:layout_width="match_parent" android:textColor="?android:attr/textColorPrimary" android:textSize="15sp"/>
     </ScrollView>
 
-    <!-- Панель ввода: текст, кнопка микрофона и кнопка отправки -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+    <!-- Ввод -->
+    <LinearLayout android:gravity="center_vertical" android:layout_height="wrap_content" android:layout_width="match_parent" android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/inputMessage"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Введите сообщение..."
-            android:textColor="#FFFFFF"
-            android:textColorHint="#888888"
-            android:backgroundTint="#00E676" />
+        <EditText android:background="?android:attr/editTextBackground" android:hint="Сообщение..." android:id="@+id/inputMessage" android:layout_height="wrap_content" android:layout_weight="1" android:layout_width="0dp"/>
 
-        <Button
-            android:id="@+id/micButton"
-            android:layout_width="48dp"
-            android:layout_height="wrap_content"
-            android:text="🎤"
-            android:textSize="18sp"
-            android:backgroundTint="#333333"
-            android:textColor="#FFFFFF"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp" />
+        <Button android:background="?android:attr/selectableItemBackground" android:id="@+id/micButton" android:layout_height="48dp" android:layout_marginStart="4dp" android:layout_width="48dp" android:text="🎤" android:textSize="20sp"/>
 
-        <Button
-            android:id="@+id/sendButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ОТПРАВИТЬ"
-            android:backgroundTint="#00E676"
-            android:textColor="#000000" />
+        <Button android:id="@+id/sendButton" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:layout_width="wrap_content" android:text="Отправить"/>
     </LinearLayout>
-
 </LinearLayout>
