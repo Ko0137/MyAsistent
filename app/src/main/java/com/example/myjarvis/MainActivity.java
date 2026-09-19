@@ -6,6 +6,7 @@ import android.app.SearchManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -56,6 +57,8 @@ public class MainActivity extends Activity {
         Button voiceBtn = findViewById(R.id.voiceBtn);
         micButton = findViewById(R.id.micButton);
         widgetSwitch = findViewById(R.id.widgetSwitch);
+        Button policyBtn = findViewById(R.id.policyBtn); // Кнопка политики конфиденциальности
+        
         pulseAnimation = AnimationUtils.loadAnimation(this, R.anim.pulse);
         
         prefs = getSharedPreferences("JarvisPrefs", MODE_PRIVATE);
@@ -63,6 +66,12 @@ public class MainActivity extends Activity {
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
+        }
+
+        if (policyBtn != null) {
+            policyBtn.setOnClickListener(v -> {
+                startActivity(new Intent(this, PrivacyPolicyActivity.class));
+            });
         }
 
         widgetSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -86,7 +95,7 @@ public class MainActivity extends Activity {
                 
                 if (userName == null) {
                     isWaitingForName = true;
-                    respond("Привет. Я Лира, твой персональный ассистент. Как я могу к тебе обращаться?");
+                    respond("Привет. Я Лира, твой персональный ассистент. Данные устройства не сохраняются. Как я могу к тебе обращаться?");
                 } else {
                     respond("Системы в норме. С возвращением, " + userName + ".");
                 }
@@ -188,6 +197,16 @@ public class MainActivity extends Activity {
 
         String lowerCmd = command.toLowerCase().trim();
         
+        // Живое сканирование установленных приложений в реальном времени (без сохранения в память)
+        if (lowerCmd.contains("сколько приложений") || lowerCmd.contains("какие приложения")) {
+            Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+            mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> pkgList = getPackageManager().queryIntentActivities(mainIntent, 0);
+            int count = pkgList.size();
+            respond("Произведено сканирование в реальном времени. На устройстве обнаружено " + count + " активных приложений. Данные не сохраняются.");
+            return;
+        }
+
         if (lowerCmd.startsWith("позвони")) {
             String number = lowerCmd.replaceAll("[^0-9+]", "");
             if (!number.isEmpty()) {
@@ -223,7 +242,7 @@ public class MainActivity extends Activity {
         if (lowerCmd.contains("привет")) { 
             respond("Здравствуйте, " + userName + "."); 
         } else { 
-            respond("Команда не распознана. Используйте запросы: 'Найди...', 'Позвони...' или 'Напиши...'."); 
+            respond("Команда не распознана. Используйте запросы: 'Найди...', 'Позвони...', 'Сколько приложений' или 'Напиши...'."); 
         }
     }
     

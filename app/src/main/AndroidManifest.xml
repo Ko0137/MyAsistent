@@ -1,27 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.myjarvis">
+
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.CALL_PHONE" />
-    
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_jarvis_logo"
-        android:roundIcon="@drawable/ic_jarvis_logo"
-        android:label="Jarvis"
-        android:theme="@android:style/Theme.NoTitleBar">
-        
-        <service android:name=".FloatingWidgetService" android:exported="false"/>
+        android:icon="@mipmap/ic_jarvis_logo"
+        android:label="Лира"
+        android:roundIcon="@mipmap/ic_jarvis_logo"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".PrivacyPolicyActivity" />
+
+        <service
+            android:name=".FloatingWidgetService"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
+
 </manifest>
