@@ -30,20 +30,20 @@ public class MainActivity extends AppCompatActivity {
         switchWidget = findViewById(R.id.switchWidget);
         switchVoice = findViewById(R.id.switchVoice);
 
-        // Приветствие и стандартный запуск без фоновых процессов
+        // Стандартное приветствие при обычном открытии приложения
         chatLog.setText("L.I.R.A.: Привет, Костя! Чем я могу помочь сегодня?\n");
 
-        sendButton.v -> {
+        // Обработка отправки текста по кнопке
+        sendButton.setOnClickListener(v -> {
             String text = inputMessage.getText().toString().trim();
             if (!text.isEmpty()) {
                 chatLog.append("Костя: " + text + "\n");
-                // Ответ ассистента на ручной/текстовый ввод
                 chatLog.append("L.I.R.A.: Обрабатываю ваш запрос...\n");
                 inputMessage.setText("");
             }
         });
 
-        // Управление плавающим виджетом вручную через настройки
+        // Управление плавающим виджетом через настройки (выключен по умолчанию)
         if (switchWidget != null) {
             switchWidget.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Управление опцией голосовой активации
+        // Управление опцией голосовой активации (опционально)
         if (switchVoice != null) {
             switchVoice.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
