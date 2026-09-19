@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.myjarvis">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_jarvis_logo"
-        android:label="Лира"
-        android:roundIcon="@mipmap/ic_jarvis_logo"
+        android:icon="@mipmap/ic_launcher"
+        android:label="LIRA Assistant"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
         
         <activity
             android:name=".MainActivity"
@@ -24,14 +22,10 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".PrivacyPolicyActivity" />
-
-        <service
-            android:name=".FloatingWidgetService"
-            android:enabled="true"
+        <activity
+            android:name=".SettingsActivity"
             android:exported="false" />
 
-    <activity android:name=".SettingsActivity" android:exported="false" />
     </application>
 
 </manifest>

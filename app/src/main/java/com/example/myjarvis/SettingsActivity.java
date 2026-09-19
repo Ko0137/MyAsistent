@@ -1,5 +1,6 @@
 package com.example.myjarvis;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Switch;
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,8 +16,7 @@ public class SettingsActivity extends AppCompatActivity {
         Switch voiceSwitch = findViewById(R.id.voiceSwitch);
         Switch quietSwitch = findViewById(R.id.quietSwitch);
 
-        // Восстанавливаем состояние из SharedPreferences
-        android.content.SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences("LiraPrefs", MODE_PRIVATE);
         themeSwitch.setChecked(prefs.getBoolean("isDarkTheme", true));
         voiceSwitch.setChecked(prefs.getBoolean("isFemaleVoice", false));
         quietSwitch.setChecked(prefs.getBoolean("isQuietMode", false));

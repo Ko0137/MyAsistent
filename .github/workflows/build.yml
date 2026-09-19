@@ -23,7 +23,7 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Build APK with Gradle Wrapper
+    - name: Build APK
       run: gradle wrapper && ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK

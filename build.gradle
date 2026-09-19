@@ -4,13 +4,15 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:8.1.1"
+        classpath 'com.android.tools.build:gradle:8.1.1'
     }
 }
-
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
+}
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
